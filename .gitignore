@@ -1,3 +1,6 @@
+*~
+.DS_Store
 code/log*
-code/venv
+code/venv*
 __pycache__
+.ipynb_checkpoints/

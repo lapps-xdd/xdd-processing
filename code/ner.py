@@ -25,13 +25,10 @@ from collections import Counter
 import spacy
 from tqdm import tqdm
 import frequencies, utils
-
+from config import TOPICS_DIR, TOPICS
 
 nlp = spacy.load("en_core_web_sm")
 
-# locations of the topics
-TOPICS_DIR = '/Users/Shared/data/xdd/doc2vec/topic_doc2vecs'
-TOPICS = ('biomedical',  'geoarchive', 'molecular_physics')
 
 # a limit on how much data we want to process for each file
 MAX_SIZE = 30000
@@ -39,7 +36,7 @@ MAX_SIZE = 30000
 FREQUENT_ENGLISH_WORDS = set(
     [line.split()[1] for line in frequencies.FREQUENCIES.split('\n') if line])
 
-# Intersting entity types, not included are for example 'CARDINAL', 'DATE',
+# Interesting entity types, not included are for example 'CARDINAL', 'DATE',
 # 'LANGUAGE', 'LAW', 'ORDINAL', 'PERCENT', 'QUANTITY' and 'TIME'
 ENTITY_TYPES = set(['FAC', 'GPE', 'LOC', 'NORP',  'ORG',  'PERSON',
                     'PRODUCT', 'WORK_OF_ART'])
@@ -51,6 +48,8 @@ def process_topics(limit=sys.maxsize):
     print()
 
 def process_topic(topic: str, limit: int):
+    # TODO: those directories should not be hard-coded, they are also in the 
+    # config file as a list.
     in_dir = os.path.join(TOPICS_DIR, topic, 'processed_doc')
     pos_dir = os.path.join(TOPICS_DIR, topic, 'processed_pos')
     ner_dir = os.path.join(TOPICS_DIR, topic, 'processed_ner')
@@ -85,6 +84,7 @@ def process_doc(topic_dir: str, doc: str, n: int):
         size = os.path.getsize(fname)
         sections = json_obj['sections']
         total_size = 0
+        # TODO: should also run over the abstract and the title!!!
         if sections is not None:
             for section in sections:
                 text = section['text']
@@ -136,15 +136,6 @@ def write_tokens(pos_dir, doc, paragraphs):
         fh.write('<p>\n\n')
         for paragraph in paragraphs:
             s = paragraph[0]
-            # if 'including: tooth enamel' in str(s):
-            #     print(s)
-            #     print([t.i for t in s])
-            #     print(f'\n<s>\n\n{str(s)}\n')
-            #     for t in s:
-            #         write_token2(t)
-            #     print()
-            #     for nc in s.noun_chunks:
-            #         print(f'{nc.start}\t{nc.end}\t{nc}')
             fh.write(f'\n<s>\n\n{str(s)}\n\n')
             for t in s:
                 write_token(fh, t)

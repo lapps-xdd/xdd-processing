@@ -26,23 +26,14 @@ The content in `text` and `scienceparse` was given to us by Ian Ross from xDD. W
 
 The document structure processing was done using the code in [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure), spacyProcessing was done with `ner.py` in this repository.
 
-As of early April 2023, sizes of directories were as follows:
+As of early April 2023, the sizes of source data (text and scienceparse) were as follows:
 
-| topic             | layer         | files | size   |
-| ------------------| ------------- | ----- | ------ |
-| biomedical        | text          | 10000 |  496MB |
-|                   | scienceparse  |  9994 |  552MB |
-|                   | processed_doc | 10000 |  414MB |
-|                   | processed_ner |  9995 |   12MB |
-|                   | processed_pos |  9995 |  935MB |
-| geoarchive        | text          | 13789 | 3184MB |
-|                   | scienceparse  | 13743 | 3069MB |
-|                   | processed_doc | 13789 | 2235MB |
-|                   | processed_ner | 13789 |   31MB |
-|                   | processed_pos | 13789 | 1319MB |
-| molecular_physics | text          | 10000 |  384MB |
-|                   | scienceparse  |  9997 |  299MB |
-|                   | processed_doc | 10000 |  341MB |
-|                   | processed_ner |  9998 |    9MB |
-|                   | processed_pos |  9998 |  791MB |
+|              | biomedical         | geoarchive            | molecular_physics  |
+| -------------| -------------------| --------------------- | ------------------ |
+| text         | 1000 files - 496Mb | 13789 files - 3,184Mb | 1000 files - 384Mb |
+| scienceparse | 9994 files - 552Mb | 13743 files - 3,069Mb | 997 files - 299Mb  |
+
+The size after document processing was either in the same ballpark or up to 30% smaller because text that did not seem like language was removed. The processed\_pos directories were generated from the processed\_doc directories and were about twice as large for biomedical and molecular\_physics, but 60% of the size for the geoarchive topic. The latter happened because only the first 30K of data in each file was processed. And more text was trunccated for geoarchive since the average file size in that topic was 162Kb, as opposed to 41Kb for biomedical and 34Kb for molecular\_physics
+
+You can see the exact sizes by running `python analyze.py`.
 

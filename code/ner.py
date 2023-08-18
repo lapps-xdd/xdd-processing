@@ -42,6 +42,11 @@ ENTITY_TYPES = set(['FAC', 'GPE', 'LOC', 'NORP',  'ORG',  'PERSON',
                     'PRODUCT', 'WORK_OF_ART'])
 
 
+DOC_SUBDIR = 'processed_doc'
+POS_SUBDIR = 'processed_pos'
+NER_SUBDIR = 'processed_ner'
+
+
 def process_topics(limit=sys.maxsize):
     for topic in TOPICS:
         process_topic(topic, limit=limit)
@@ -50,9 +55,9 @@ def process_topics(limit=sys.maxsize):
 def process_topic(topic: str, limit: int):
     # TODO: those directories should not be hard-coded, they are also in the 
     # config file as a list.
-    in_dir = os.path.join(TOPICS_DIR, topic, 'processed_doc')
-    pos_dir = os.path.join(TOPICS_DIR, topic, 'processed_pos')
-    ner_dir = os.path.join(TOPICS_DIR, topic, 'processed_ner')
+    in_dir = os.path.join(TOPICS_DIR, topic, DOC_SUBDIR)
+    pos_dir = os.path.join(TOPICS_DIR, topic, POS_SUBDIR)
+    ner_dir = os.path.join(TOPICS_DIR, topic, NER_SUBDIR)
     os.makedirs(pos_dir, exist_ok=True)
     os.makedirs(ner_dir, exist_ok=True)
     print(f'\nProcessing {in_dir}...')

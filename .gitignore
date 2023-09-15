@@ -1,9 +1,11 @@
 *~
 .DS_Store
+code/elastic-*.json
 code/log*
+code/*log*
 code/venv*
 __pycache__
 .ipynb_checkpoints/
 out/
-venv
+*.log
 backup.sh

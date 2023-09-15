@@ -13,7 +13,7 @@ from config import TOPICS_DIR, TOPICS
 
 # a limit on how much data we want to put on the search engine for each file,
 # now this is set to the same number of as for spaCy processing
-MAX_SIZE = 30000
+MAX_SIZE = 50000
 
 
 def process_topics(limit: int):
@@ -77,7 +77,7 @@ def merge(sp_obj, doc_obj, ner_obj):
         if section['heading'] is not None:
             text.write(f'{section["heading"].strip()}\n\n')
         text.write(f'{section["text"].strip()}\n\n')
-    es_obj['text'] = text.getvalue()
+    es_obj['text'] = text.getvalue()[:MAX_SIZE]
     es_obj['entities'] = ner_obj['entities']
     return es_obj
 

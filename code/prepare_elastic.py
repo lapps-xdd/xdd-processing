@@ -45,7 +45,7 @@ from config import TOPICS_DIR, TOPICS
 data_dir = 'processed_mer'
 
 
-def prepare_topic(topic: str):
+def prepare_topic(topic: str, limit: int):
     path = os.path.join(TOPICS_DIR, topic, data_dir)
     fnames = [os.path.join(path, fname) for fname in os.listdir(path)]
     elastic_file = f'elastic-{topic}.json'
@@ -54,13 +54,15 @@ def prepare_topic(topic: str):
         for n, fname in enumerate(sorted(fnames)):
             if n % 100 == 0:
                 print(n)
+            if n + 1 > limit:
+                break
             json_obj = json.load(open(fname))
             elastic_obj = { "topic": topic }
-            for field in ('year', 'title', 'authors'):
+            for field in ('name', 'year', 'title', 'authors'):
                 elastic_obj[field] = json_obj[field]
-            for field in ('abstract', 'text'):
+            for field in ('abstract', 'abstract_summary', 'text', 'text_summary'):
                 elastic_obj[field] = json_obj[field]
-            fh.write(json.dumps({"index": {}}) + '\n')
+            fh.write(json.dumps({"index": {"_id": json_obj['name']}}) + '\n')
             fh.write(json.dumps(elastic_obj) + '\n')
         fh.write('\n')
 
@@ -68,7 +70,8 @@ def prepare_topic(topic: str):
 
 if __name__ in '__main__':
 
+    limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
     for topic in TOPICS:
         print()
-        prepare_topic(topic)
+        prepare_topic(topic, limit)
 

@@ -35,7 +35,17 @@ These can be used for an elastic bulk import:
 $ curl http://localhost:9200/xdd-bio/_doc/_bulk \
     -o /dev/null \
     -H "Content-Type: application/json" \
-    -X POST --data-binary @/code/elastic-biomedical.json
+    -X POST --data-binary @elastic-biomedical.json
+
+$ curl http://localhost:9200/xdd-geo/_doc/_bulk \
+    -o /dev/null \
+    -H "Content-Type: application/json" \
+    -X POST --data-binary @elastic-geoarchive.json
+
+$ curl http://localhost:9200/xdd-mol/_doc/_bulk \
+    -o /dev/null \
+    -H "Content-Type: application/json" \
+    -X POST --data-binary @elastic-molecular_physics.json
 
 """
 
@@ -62,6 +72,10 @@ def prepare_topic(topic: str, limit: int):
                 elastic_obj[field] = json_obj[field]
             for field in ('abstract', 'abstract_summary', 'text', 'text_summary'):
                 elastic_obj[field] = json_obj[field]
+            elastic_obj['entities'] = {}
+            for entity_type, dictionary in json_obj.get('entities', {}).items():
+                elastic_obj['entities'][entity_type] = \
+                    [(entity, str(count)) for entity, count in dictionary.items()]
             fh.write(json.dumps({"index": {"_id": json_obj['name']}}) + '\n')
             fh.write(json.dumps(elastic_obj) + '\n')
         fh.write('\n')

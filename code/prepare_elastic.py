@@ -10,19 +10,8 @@ Uses the following fields:
 - authors
 - abstract
 - text
-- entities-TYPE for each key in the entities dictionary
+- entities
 - topic
-
-For now, the entities are just lists that enumerate each token, so if the merged file had
-
-"entities": {
-    "ORG": { "the Cassini INMS": 1, "RS": 2 },
-    "PRODUCT": { "Saturn": 6, "Voyager 2": 2 } }
-
-Then the output will have
-
-"entities-ORG": ["the Cassini INMS", "RS", "RS" ],
-"entities-PRODUCT": ["Saturn", "Saturn", "Saturn", "Saturn", "Saturn", "Saturn", "Voyager 2", "Voyager 2" ]
 
 Output is written to three files in the code directory:
 

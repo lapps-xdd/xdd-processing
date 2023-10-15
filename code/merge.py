@@ -22,14 +22,15 @@ from io import StringIO
 from tqdm import tqdm
 from config import TOPICS_DIR, TOPICS, abbreviate_topic, ENTITY_TYPES
 
-# A limit on how much data we want to put on the search engine for each file,
-# now this is set to the same number as for spaCy processing.
+# A limit on how much data we want to put in the abstract and text fields for each
+# document, now this is set to the same number as for spaCy processing.
 MAX_SIZE = 50000
 
-# In addition, we enter short versions of the abstract and text fields, with just the
-# data that will be returned from the database. This is quite low now, but we will want
-# to increase this because it will be all that we have to run NLP on when ranking.
-SUMMARY_SIZE = 1000
+# In addition, we enter a summary, with just the data that will be returned from the
+# database. Any processing for ranking will be done using just these data. Setting it
+# higher will make ranking better but increase the size of the datastrucutres handed
+# from the database.
+SUMMARY_MAX_TOKENS = 2000
 
 
 def process_topics(limit: int):
@@ -104,16 +105,9 @@ def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict):
     merged_obj['title'] = get_meta('title', sp_obj)
     merged_obj['year'] = get_meta('year', sp_obj)
     merged_obj['authors'] = get_meta('authors', sp_obj)
-    abstract = get_abstract(doc_obj)
-    merged_obj['abstract'] = abstract
-    merged_obj['abstract_summary'] = abstract[:SUMMARY_SIZE]
-    text = StringIO()
-    for section in doc_obj['sections']:
-        if section['heading'] is not None:
-            text.write(f'{section["heading"].strip()}\n\n')
-        text.write(f'{section["text"].strip()}\n\n')
-    merged_obj['text'] = text.getvalue()[:MAX_SIZE]
-    merged_obj['text_summary'] = merged_obj['text'][:SUMMARY_SIZE]
+    merged_obj['abstract'] = get_abstract(doc_obj)
+    merged_obj['text'] = get_text(doc_obj)
+    merged_obj['summary'] = get_summary(merged_obj)
     merged_obj['entities'] = ner_obj.get('entities', {})
     merged_obj['terms'] = trm_obj
     return merged_obj
@@ -129,6 +123,20 @@ def get_abstract(doc_obj: dict):
     abstract_obj = doc_obj.get('abstract')
     return abstract_obj.get('abstract', '') if abstract_obj is not None else ''
 
+def get_text(doc_obj: dict):
+    text = StringIO()
+    for section in doc_obj['sections']:
+        if section['heading'] is not None:
+            text.write(f'{section["heading"].strip()}\n\n')
+        text.write(f'{section["text"].strip()}\n\n')
+    return text.getvalue()[:MAX_SIZE]
+
+def get_summary(merged_obj: dict):
+    """Get a summary by concatenating the abstact and the text while staying within
+    the maximum number of tokens allowed."""
+    summary = merged_obj['abstract'] + ' ' + merged_obj['text']
+    return ' '.join(summary.split()[:SUMMARY_MAX_TOKENS])
+    
 
 def valid_merger(merged_obj: dict):
     for field in ('title', 'year', 'authors'):

@@ -70,7 +70,7 @@ def prepare_topic(topic: str, limit: int):
             json_obj = json.load(open(fname))
             elastic_obj = { "topic": topic }
             for field in ('name', 'year', 'title', 'authors', 'abstract',
-                          'abstract_summary', 'text', 'text_summary', 'terms'):
+                          'text', 'summary', 'terms'):
                 elastic_obj[field] = json_obj[field]
             elastic_obj['entities'] = {}
             for entity_type, dictionary in json_obj.get('entities', {}).items():

@@ -32,6 +32,14 @@ MAX_SIZE = 50000
 # from the database.
 SUMMARY_MAX_TOKENS = 2000
 
+# Metadata files. Information in these files can also be obtained by pinging the xDD API
+# at https://xdd.wisc.edu/api/articles. For example:
+# https://xdd.wisc.edu/api/articles?docids=5783bcafcf58f176c768f5cc,5754e291cf58f1b0c7844cd2
+METADATA = {
+    'biomedical': 'biomedical_docids_10k.bibjson',
+    'geoarchive': 'geoarchive.bibjson',
+    'molecular_physics': 'molecular_physics_docids_10k.bibjson' }
+
 
 def process_topics(limit: int):
     for topic in TOPICS:
@@ -44,12 +52,14 @@ def process_topic(topic: str, limit: int):
     ner_dir = os.path.join(TOPICS_DIR, topic, 'processed_ner')
     trm_dir = os.path.join(TOPICS_DIR, topic, 'processed_trm')
     out_dir = os.path.join(TOPICS_DIR, topic, 'processed_mer')
+    meta_file = os.path.join(TOPICS_DIR, topic, METADATA.get(topic))
     os.makedirs(out_dir, exist_ok=True)
     print(f'\nLoading {sp_dir}...')
     print(f'Adding {ner_dir}...')
     print(f'Writing to {out_dir}...\n')
     terms_file = os.path.join(trm_dir, f'frequencies-{abbreviate_topic(topic)}.json')
     terms = json.loads(open(terms_file).read())
+    meta = load_metadata(meta_file)
     docs = os.listdir(doc_dir)
     with open(f'log-merger-{topic}.log', 'w') as log:
         for doc in tqdm(sorted(docs)[:limit]):
@@ -65,7 +75,7 @@ def process_topic(topic: str, limit: int):
             identifier = os.path.splitext(doc)[0]
             trm_obj = terms.get(identifier, [])
             try:
-                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj)
+                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj, meta)
                 if valid_merger(merged_obj):
                     with open(os.path.join(out_dir, doc), 'w') as fh:
                         json.dump(merged_obj, fh, indent=2)
@@ -96,7 +106,7 @@ def load_json(topic_dir: str, doc: str):
         return {}
 
 
-def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict):
+def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict, meta: dict):
     """Merge ScienceParse, DocumentParser and NER results into one JSON file, collecting
     all data that we want to load into ElasticSearch. Uses abstract and metadata from the
     first, the text from the second, and the entities from the third."""
@@ -104,6 +114,7 @@ def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict):
     merged_obj['name'] = get_name(doc)
     merged_obj['title'] = get_meta('title', sp_obj)
     merged_obj['year'] = get_meta('year', sp_obj)
+    merged_obj['url'] = get_url(merged_obj['name'], meta)
     merged_obj['authors'] = get_meta('authors', sp_obj)
     merged_obj['abstract'] = get_abstract(doc_obj)
     merged_obj['text'] = get_text(doc_obj)
@@ -113,8 +124,30 @@ def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict):
     return merged_obj
 
 
+def load_metadata(fname: str):
+    raw_meta = json.loads(open(fname).read())
+    meta = {}
+    for record in raw_meta:
+        identifier = None
+        for identifier_pair in record['identifier']:
+            if identifier_pair.get('type') == '_xddid':
+                identifier = identifier_pair['id']
+        if identifier is not None:
+            meta[identifier] = record
+    return meta
+
 def get_name(doc: str):
     return os.path.splitext(doc)[0]
+
+def get_url(name: str, meta: dict):
+    meta_data = meta.get(name)
+    if meta_data:
+        links = meta_data.get('link', [])
+        if links:
+            link = links[0]
+            if 'url' in link:
+                return link['url']
+    return None
 
 def get_meta(field: str, json_obj: dict):
     return json_obj.get('metadata', {}).get(field) 

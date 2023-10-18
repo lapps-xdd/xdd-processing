@@ -37,6 +37,8 @@ $ curl http://localhost:9200/xdd-mol/_doc/_bulk \
     -H "Content-Type: application/json" \
     -X POST --data-binary @elastic-molecular_physics.json
 
+Also see load_commands.py for a utility to print those commands.
+
 Testing a small sample:
 
 $ curl http://localhost:9200/test/_doc/_bulk \

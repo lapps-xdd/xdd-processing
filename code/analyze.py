@@ -14,26 +14,32 @@ from config import TOPICS_DIR, TOPICS, DATA_DIRS
 
 def analyze_topics(write_overview: bool):
     for topic in TOPICS:
-        print()
+        print(
+            '\nPrinting number of documents, total size, average_size and processing' +
+            '\ntime in seconds (the latter gives some wacco results)\n')
         analyze_topic(topic, write_overview)
 
 def analyze_topic(topic: str, write_overview: bool):
     for data_dir in DATA_DIRS:
         path = os.path.join(TOPICS_DIR, topic, data_dir)
         fnames = [os.path.join(path, fname) for fname in os.listdir(path)]
-        sized_fnames = [(os.path.getsize(f), os.path.split(f)[-1])
-                        for f in fnames if os.path.isfile(f)]
+        fnames = [f for f in fnames if os.path.isfile(f)]
+        fsizes = [(os.path.getsize(f), os.path.split(f)[-1]) for f in fnames]
+        ftimes = [os.stat(f).st_birthtime for f in fnames]
+        ftimes = list(sorted(ftimes))
         number_of_files = len(fnames)
-        total_size = int(sum([pair[0] for pair in sized_fnames]) / 1000000)
+        total_size = int(sum([pair[0] for pair in fsizes]) / 1000000)
         average_size = int(total_size * 1000 / number_of_files)
-        print(f'{topic:20} {data_dir:20} {number_of_files:5d} {total_size:4d}Mb  {average_size:5d}Kb')
+        elapsed_time = ftimes[-1] - ftimes[0]
+        print(f'{topic:20} {data_dir:20} {number_of_files:5d} {total_size:4d}Mb'
+              + f'{average_size:5d}Kb  {elapsed_time:6.0f}')
         if write_overview and data_dir == 'processed_doc':
             overview_file = f'out/{topic}-{data_dir}-sizes.html'
             with open(overview_file, 'w') as fh:
                 #print(f'Printing {overview_file}')
                 fh.write('<html>\n')
                 fh.write('<table cellpadding=5 cellspacing=0 border=1>\n')
-                for n, (fsize, fname) in enumerate(sorted(sized_fnames, reverse=True)):
+                for n, (fsize, fname) in enumerate(sorted(fsizes, reverse=True)):
                     fh.write('<tr>\n')
                     fh.write(f'  <td>{n}</td>\n')
                     fh.write(f'  <td>{fsize}</td>\n')

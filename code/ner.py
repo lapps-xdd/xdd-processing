@@ -16,7 +16,7 @@ Without LIMIT all files in each topic directory are processed.
 Only the first N characters of the data will be processed, the exact size is set
 by the MAX_SIZE valiable
 
-Uses a hard-code directory path in TOPICS_DIR.
+Uses a hard-code directory path in config.
 
 """
 
@@ -25,7 +25,7 @@ from collections import Counter
 import spacy
 from tqdm import tqdm
 import frequencies, utils
-from config import TOPICS_DIR, TOPICS
+from config import TOPICS_DIR, data_directory, ENTITY_TYPES
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -36,10 +36,10 @@ MAX_SIZE = 30000
 FREQUENT_ENGLISH_WORDS = set(
     [line.split()[1] for line in frequencies.FREQUENCIES.split('\n') if line])
 
-# Interesting entity types, not included are for example 'CARDINAL', 'DATE',
-# 'LANGUAGE', 'LAW', 'ORDINAL', 'PERCENT', 'QUANTITY' and 'TIME'
-ENTITY_TYPES = set(['FAC', 'GPE', 'LOC', 'NORP',  'ORG',  'PERSON',
-                    'PRODUCT', 'WORK_OF_ART'])
+
+DOC_SUBDIR = 'processed_doc'
+POS_SUBDIR = 'processed_pos'
+NER_SUBDIR = 'processed_ner'
 
 
 def process_topics(limit=sys.maxsize):
@@ -50,9 +50,9 @@ def process_topics(limit=sys.maxsize):
 def process_topic(topic: str, limit: int):
     # TODO: those directories should not be hard-coded, they are also in the 
     # config file as a list.
-    in_dir = os.path.join(TOPICS_DIR, topic, 'processed_doc')
-    pos_dir = os.path.join(TOPICS_DIR, topic, 'processed_pos')
-    ner_dir = os.path.join(TOPICS_DIR, topic, 'processed_ner')
+    in_dir = data_directory(topic, DOC_SUBDIR)
+    pos_dir = data_directory(topic, POS_SUBDIR)
+    ner_dir = data_directory(topic, NER_SUBDIR)
     os.makedirs(pos_dir, exist_ok=True)
     os.makedirs(ner_dir, exist_ok=True)
     print(f'\nProcessing {in_dir}...')

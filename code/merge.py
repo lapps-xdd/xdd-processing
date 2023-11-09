@@ -16,7 +16,7 @@ TODO:
 
 """
 
-import os, sys, json
+import os, sys, json, argparse
 from collections import Counter
 from io import StringIO
 from tqdm import tqdm
@@ -178,7 +178,63 @@ def valid_merger(merged_obj: dict):
     return True
 
 
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Parse xDD files')
+    parser.add_argument('-i', help="source directory")
+    parser.add_argument('-o', help="output directory within source directory", default='output/ner')
+    parser.add_argument('--limit', help="Maximum number of documents to process", default=sys.maxsize)
+    return parser.parse_args()
+
+
+def merge_directory(data_directory: str, limit: int):
+    sp_dir = os.path.join(data_directory, 'scienceparse')
+    doc_dir = os.path.join(data_directory, 'output', 'doc')
+    ner_dir = os.path.join(data_directory, 'output', 'ner')
+    trm_dir = os.path.join(data_directory, 'output', 'trm')
+    out_dir = os.path.join(data_directory, 'output', 'mer')
+    meta_file = os.path.join(data_directory, 'metadata.json')
+    os.makedirs(out_dir, exist_ok=True)
+    print(f'\nLoading {sp_dir}...')
+    print(f'Adding {ner_dir}...')
+    print(f'Writing to {out_dir}...\n')
+    terms_file = os.path.join(trm_dir, 'frequencies.json')
+    terms = json.loads(open(terms_file).read())
+    meta = load_metadata(meta_file)
+    docs = os.listdir(doc_dir)
+    print(docs)
+    with open(f'log-merger.log', 'w') as log:
+        for doc in tqdm(sorted(docs)[:limit]):
+            # print(f'{doc}')
+            # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
+            # processed_doc file format: 54b4324ee138239d8684aeb2.json
+            # processed_ner file format: 54b4324ee138239d8684aeb2.json
+            sp_obj = load_json(sp_dir, doc[:-5] + '_input.pdf.json')
+            doc_obj = load_json(doc_dir, doc)
+            ner_obj = load_json(ner_dir, doc)
+            if 'entities' in ner_obj:
+                ner_obj['entities'] = sanitize_entities(ner_obj['entities'])
+            identifier = os.path.splitext(doc)[0]
+            trm_obj = terms.get(identifier, [])
+            try:
+                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj, meta)
+                if valid_merger(merged_obj):
+                    with open(os.path.join(out_dir, doc), 'w') as fh:
+                        json.dump(merged_obj, fh, indent=2)
+                else:
+                    log.write(f'{doc} -- object from merger was not complete\n')
+                    #with open(os.path.join(out_dir, doc), 'w') as fh:
+                    #    json.dump(merged_obj, fh, indent=2)
+            except Exception as e:
+                log.write(f'{doc} -- {e}\n')
+
+
 if __name__ == '__main__':
 
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    process_topics(limit)
+    if '-i' in sys.argv[1:]:
+        args = parse_args()
+        print(args)
+        merge_directory(args.i, int(args.limit))
+    else:
+        limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
+        process_topics(limit)

@@ -20,7 +20,7 @@ Uses a hard-code directory path in config.
 
 """
 
-import os, sys, json, time
+import os, sys, json, time, argparse
 from collections import Counter
 import spacy
 from tqdm import tqdm
@@ -167,7 +167,45 @@ def write_token2(t):
     print(f'{line}')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Run NER over xDD files')
+    parser.add_argument('--doc', help="directory with document structure parses")
+    parser.add_argument('--pos', help="output directory for POS data")
+    parser.add_argument('--ner', help="output directory for NER data")
+    parser.add_argument('--limit', help="Maximum number of documents to process",
+                        type=int, default=sys.maxsize)
+    return parser.parse_args()
+
+
+def process_directory(doc_dir: str, pos_dir: str, ner_dir: str, limit: int):
+    """Run NER over all documents in doc_dir and write part-of-speech output to
+    pos_dir and named entities to ner_dir.""" 
+    os.makedirs(pos_dir, exist_ok=True)
+    os.makedirs(ner_dir, exist_ok=True)
+    print(f'\nProcessing {doc_dir}...')
+    print(f'Writing to {pos_dir}...')
+    print(f'Writing to {ner_dir}...\n')
+    docs = os.listdir(doc_dir)
+    with open('log-preprocessing-ner.txt', 'w') as log:
+        n = 1
+        for doc in tqdm(list(sorted(docs))[:limit]):
+            n += 1
+            try:
+                t0 = time.time()
+                entities, paragraphs = process_doc(doc_dir, doc, n + 1)
+                write_entities(ner_dir, doc, entities)
+                write_tokens(pos_dir, doc, paragraphs)
+                elapsed = time.time() - t0
+                log.write(f'{doc}\t{elapsed:.2f}\n')
+            except Exception as e:
+                log.write(f'{doc}\t{e}\n')
+
+
 if __name__ == '__main__':
 
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    process_topics(limit)
+    args = parse_args()
+    process_directory(args.doc, args.pos, args.ner, args.limit)
+
+    # This was the old entry point into the code
+    # limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
+    # process_topics(limit)

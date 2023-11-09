@@ -1,7 +1,15 @@
 """Preparing the ElasticSearch file
 
-Takes the output of the merge.py script and creates input for ElasticSearch. Creates one file 
-for each topic and that file can be used for a bulk import.
+Takes the output of the merge.py script and creates input for ElasticSearch. 
+
+$ python prepare_elastic.py -i INDIR -o OUTDIR [--domain DOMAIN] [--limit N]
+
+Assumes that INDIR containes the merged files and creates OUTDIR/elastic.json,
+which can be used for a bulk import.
+
+The --domain options adds a domain to each document (this is pending the addition
+of pre-processing funtionality to classify documents into domains) and --limit only
+includes the first N documents from INDIR.
 
 Uses the following fields:
 - name
@@ -10,38 +18,24 @@ Uses the following fields:
 - authors
 - abstract
 - text
+- summary
 - entities
 - terms
-- topic
+- domain
 
-Output is written to three files:
 
-    TOPICS_DIR/biomedical/processed_ela/elastic-biomedical.json
-    TOPICS_DIR/geoarchive/processed_ela/elastic-geoarchive.json
-    TOPICS_DIR/molecular_physics/processed_ela/elastic-molecular_physics.json
+The elastic.json file can be used for an elastic bulk import from OUTDIR:
 
-These can be used for an elastic bulk import from those directories:
-
-$ curl http://localhost:9200/xdd-bio/_doc/_bulk \
+$ curl http://localhost:9200/xdd/_doc/_bulk \
     -o /dev/null \
     -H "Content-Type: application/json" \
-    -X POST --data-binary @elastic-biomedical.json
+    -X POST --data-binary @elastic.json
 
-$ curl http://localhost:9200/xdd-geo/_doc/_bulk \
-    -o /dev/null \
-    -H "Content-Type: application/json" \
-    -X POST --data-binary @elastic-geoarchive.json
-
-$ curl http://localhost:9200/xdd-mol/_doc/_bulk \
-    -o /dev/null \
-    -H "Content-Type: application/json" \
-    -X POST --data-binary @elastic-molecular_physics.json
-
-Testing a small sample:
+To test with a small sample first use the --limit option and do:
 
 $ curl http://localhost:9200/test/_doc/_bulk \
     -H "Content-Type: application/json" \
-    -X POST --data-binary @elastic-biomedical.json
+    -X POST --data-binary @elastic.json
 
 $ curl -X GET "http://localhost:9200/test/_search?pretty"
 
@@ -49,26 +43,33 @@ $ curl -X GET "http://localhost:9200/test/_mapping?pretty"
 
 """
 
-import os, sys, json
-from config import TOPICS_DIR, TOPICS, data_directory
+import os, sys, json, argparse
 
-mer_dir = 'processed_mer'
-ela_dir = 'processed_ela'
+ELASTIC_FILE = 'elastic.json'
 
 
-def prepare_topic(topic: str, limit: int):
-    path = os.path.join(TOPICS_DIR, topic, mer_dir)
-    fnames = [os.path.join(path, fname) for fname in os.listdir(path)]
-    elastic_file = os.path.join(data_directory(topic, ela_dir), f'elastic-{topic}.json')
+def parse_args():
+    parser = argparse.ArgumentParser(description='Parse xDD files')
+    parser.add_argument('-i', help="input directory")
+    parser.add_argument('-o', help="output directory")
+    parser.add_argument('--domain', help="Domain of the document", default=None)
+    parser.add_argument('--limit', help="Maximum number of documents to process", default=sys.maxsize)
+    return parser.parse_args()
+
+
+def prepare(indir: str, outdir: str, domain: str, limit: int):
+    fnames = [os.path.join(indir, fname) for fname in os.listdir(indir)]
+    elastic_file = os.path.join(outdir, ELASTIC_FILE)
     print(f'Creating {elastic_file}')
+    os.makedirs(outdir, exist_ok=True)
     with open(elastic_file, 'w') as fh:
         for n, fname in enumerate(sorted(fnames)):
-            if n % 100 == 0:
+            if n and n % 100 == 0:
                 print(n)
             if n + 1 > limit:
                 break
             json_obj = json.load(open(fname))
-            elastic_obj = { "topic": topic }
+            elastic_obj = { "domain": domain }
             for field in ('name', 'year', 'title', 'authors', 'url', 'abstract',
                           'text', 'summary', 'terms'):
                 elastic_obj[field] = json_obj[field]
@@ -91,10 +92,8 @@ def fix_terms(elastic_obj: dict):
         term_triple[2] = "%.6f" % term_triple[2]
 
 
+
 if __name__ in '__main__':
 
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    for topic in TOPICS:
-        print()
-        prepare_topic(topic, limit)
-
+    args = parse_args()
+    prepare(args.i, args.o, args.domain, int(args.limit))

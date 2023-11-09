@@ -20,7 +20,7 @@ Uses a hard-code directory path in config.
 
 """
 
-import os, sys, json, time
+import os, sys, json, time, argparse
 from collections import Counter
 import spacy
 from tqdm import tqdm
@@ -167,7 +167,48 @@ def write_token2(t):
     print(f'{line}')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Parse xDD files')
+    parser.add_argument('-i', help="source directory")
+    parser.add_argument('-o', help="output directory within source directory", default='output/ner')
+    parser.add_argument('--limit', help="Maximum number of documents to process", default=sys.maxsize)
+    return parser.parse_args()
+
+
+def process_directory(data_dir: str, output: str, limit: int):
+    # TODO: those directories should not be hard-coded, they are also in the
+    # config file as a list.
+    # TODO: after refactoring this is also still unsatisfactory
+    in_dir = os.path.join(data_dir, 'output/doc')
+    pos_dir = os.path.join(data_dir, 'output/pos')
+    ner_dir = os.path.join(data_dir, output)
+    os.makedirs(pos_dir, exist_ok=True)
+    os.makedirs(ner_dir, exist_ok=True)
+    print(f'\nProcessing {in_dir}...')
+    print(f'Writing to {pos_dir}...')
+    print(f'Writing to {ner_dir}...\n')
+    docs = os.listdir(in_dir)
+    with open(f'log-{os.path.basename(data_dir)}.txt', 'w') as log:
+        n = 1
+        for doc in tqdm(list(sorted(docs))[:limit]):
+            n += 1
+            try:
+                t0 = time.time()
+                entities, paragraphs = process_doc(in_dir, doc, n + 1)
+                write_entities(ner_dir, doc, entities)
+                write_tokens(pos_dir, doc, paragraphs)
+                elapsed = time.time() - t0
+                log.write(f'{doc}\t{elapsed:.2f}\n')
+            except Exception as e:
+                log.write(f'{doc}\t{e}\n')
+
+
 if __name__ == '__main__':
 
-    limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    process_topics(limit)
+    if '-i' in sys.argv[1:]:
+        args = parse_args()
+        print(args)
+        process_directory(args.i, args.o, int(args.limit))
+    else:
+        limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
+        process_topics(limit)

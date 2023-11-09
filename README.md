@@ -1,39 +1,27 @@
 # Processing xDD Data
 
-Code for processing the files in the three topics: biomedical, geoarchive and molecular_physics. Only useful if you have access to the xDD data.
-
-Each topic is associated with a topic directory and each of those has the same structure:
-
-| directory     | description                                                            |
-| ------------- | ---------------------------------------------------------------------- |
-| text          | raw text fromn xDD, from simple pdf extract                            |
-| scienceparse  | parsed pdf into json via https://github.com/allenai/science-parse      |
-| processed_doc | doc structure parsing from the text and the scienceparse documents     |
-| processed_ner | running spaCy named entity recognition on processed_doc                |
-| processed_pos | separate layer to store other basic information from spaCy             |
-| processed_mer | merging all the above as a first preparation for Elastic Search import |
-
-Each directory also has a .bibjson file with metadata and for each directory there is a sister file with docids.
-
-The content in `text` and `scienceparse` was given to us by Ian Ross from xDD, we cannot redistribute that content.
+Code for processing xDD filesonly useful if you have access to the xDD data.
 
 The document structure processing was done using the code in [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure).
 
-> Note that the code in `xdd-docstructre` puts document structure results in a directory named `processed`. This code assumes that document structure parsing results are in `processed_doc`, so you will have to change the name of the directory.
 
 There are several processing steps:
 
-1. document structure parsing (done elsewhere, see above)
-2. running some NLP like NER
-3. generating term lists (not yet integrated here)
-4. merging all the above
-5. preparing the files that will be import into the database
+1. Document structure parsing (done using the code in [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure)).
+2. Extracting named entities with spaCy.
+3. Generating term lists (done using the code in [https://github.com/lapps-xdd/xdd-terms](https://github.com/lapps-xdd/xdd-temrs)).
+4. Merging document structure, named entities, temrs and metadata.
+5. Preparing the file that will be imported into the database.
 
 
+### 1. Document structure parsing
 
-### Running tagging named entity extraction
+See [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure).
 
-To create the contents of `processed_ner` and `processed_pos` use the script `ner.py` in this repository. This script requires spaCy to run.
+
+### 2. Named entity extraction
+
+Use the script `ner.py` in this repository, which requires spaCy to run.
 
 ```bash
 $ pip install spacy==3.5.1
@@ -43,45 +31,56 @@ $ python -m spacy download en_core_web_sm
 To run the script do
 
 ```bash
-$ python ner.py [LIMIT]
+$ python ner.py --doc DIR1 --pos DIR2 --ner DIR3 [--limit N]
 ```
 
-If LIMIT is not used than all files for all topics are processed.
+The input in DIR1 should have files with the output from the document structure parser. part-of-speech data is written to DIR 2 and named entities to DIR3. If LIMIT is used than nomore than N files wiil be processed.
 
 
-### Merging
+### 3. Term extraction
 
-To create the content in `processed_mer` use `merge.py`, which also takes an optional LIMIT parameter:
+See [https://github.com/lapps-xdd/xdd-terms](https://github.com/lapps-xdd/xdd-temrs).
+
+
+### 4. Merging
+
+Requires output from previous processing stages as well as a file with metadata.
 
 ```bash
-$ python merge.py [LIMIT]
+$ python merge.py --scpa DIR1 --doc DIR2 --ner DIR3 --trm DIR4 --meta FILE --out DIR5 [--limit N]
 ```
 
+For input we have ScienceParse results (DIR1), document parser results (DIR2), named entities (DIR3), terms (DIR4) and a metadata file. Output is written to DIR5.
 
-### Preparing the database files
+
+### 5. Preparing the database file
 
 Created from the merged data with `prepare_elastic.py`:
 
 ```bash
-$ python prepare_elastic.py
+$ python prepare_elastic.py -i DIR1 -o DIR2 [--domain DOMAIN] [--limit N] 
 ```
 
-Creates three files in the current directory: `elastic-biomedical.json`, `elastic-geoarchive.json` and `elastic-molecular_physics.json`. Each of them has pairs of lines as required by ElasticSearch (the second line is spread out over a couple of lines for clarity, it really is only one line, otherwise ElasticSearch fails to load it):
+Takes merged files from DIR1 and creates a file `elastic.json` in DIR2. The file has pairs of lines as required by ElasticSearch (the second line is spread out over a couple of lines for clarity, it really is only one line, otherwise ElasticSearch fails to load it):
 
 ```json
 {"index": {"_id": "54b4324ee138239d8684aeb2"}}}
 {
-  "topic": "biomedical",
+  "domain": "biomedical",
   "name": "54b4324ee138239d8684aeb2",
   "year": 2010,
   "title": "Nanomechanical properties of modern and fossil bone",
   "authors": ["Sara E. Olesiak", "Matt Sponheimer", "Jaelyn J. Eberle", "Michelle L. Oyen"],
   "abstract": "Relatively little is known about how diagenetic processes affect ...",
-  "abstract_summary": "...",
+  "url": "http://www.sciencedirect.com/science/article/pii/S0022283609014053",
   "text": "...",
-  "text_summary": "..."
+  "summary": "...",
+  "terms": [...],
+  "entities": {...}
 }
 ```
+
+<!--
 
 ### Notes on data sizes
 
@@ -97,3 +96,4 @@ The size after document processing was either in the same ballpark or up to 30% 
 
 You can see some of the exact sizes by running `python analyze.py`.
 
+-->

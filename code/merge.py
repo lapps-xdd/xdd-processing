@@ -180,36 +180,32 @@ def valid_merger(merged_obj: dict):
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Parse xDD files')
-    parser.add_argument('-i', help="source directory")
-    parser.add_argument('-o', help="output directory within source directory", default='output/ner')
-    parser.add_argument('--limit', help="Maximum number of documents to process", default=sys.maxsize)
+    parser = argparse.ArgumentParser(description='Merging processing layers and metadata')
+    parser.add_argument('--scpa', help="directory with ScienceParse results")
+    parser.add_argument('--meta', help="file with meta data")
+    parser.add_argument('--doc', help="directory with document structure parses")
+    parser.add_argument('--ner', help="directory with NER data")
+    parser.add_argument('--trm', help="directory with term data")
+    parser.add_argument('--out', help="output directory")
+    parser.add_argument('--limit', help="Maximum number of documents to process",
+                        type=int, default=sys.maxsize)
     return parser.parse_args()
 
 
-def merge_directory(data_directory: str, limit: int):
-    sp_dir = os.path.join(data_directory, 'scienceparse')
-    doc_dir = os.path.join(data_directory, 'output', 'doc')
-    ner_dir = os.path.join(data_directory, 'output', 'ner')
-    trm_dir = os.path.join(data_directory, 'output', 'trm')
-    out_dir = os.path.join(data_directory, 'output', 'mer')
-    meta_file = os.path.join(data_directory, 'metadata.json')
+def merge_directory(
+        scpa_dir: str, meta_file: str, doc_dir: str, ner_dir: str, trm_dir: str,
+        out_dir: str, limit: int):
     os.makedirs(out_dir, exist_ok=True)
-    print(f'\nLoading {sp_dir}...')
-    print(f'Adding {ner_dir}...')
-    print(f'Writing to {out_dir}...\n')
     terms_file = os.path.join(trm_dir, 'frequencies.json')
     terms = json.loads(open(terms_file).read())
     meta = load_metadata(meta_file)
     docs = os.listdir(doc_dir)
-    print(docs)
     with open(f'log-merger.log', 'w') as log:
         for doc in tqdm(sorted(docs)[:limit]):
-            # print(f'{doc}')
             # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
             # processed_doc file format: 54b4324ee138239d8684aeb2.json
             # processed_ner file format: 54b4324ee138239d8684aeb2.json
-            sp_obj = load_json(sp_dir, doc[:-5] + '_input.pdf.json')
+            sp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
             doc_obj = load_json(doc_dir, doc)
             ner_obj = load_json(ner_dir, doc)
             if 'entities' in ner_obj:
@@ -231,10 +227,9 @@ def merge_directory(data_directory: str, limit: int):
 
 if __name__ == '__main__':
 
-    if '-i' in sys.argv[1:]:
-        args = parse_args()
-        print(args)
-        merge_directory(args.i, int(args.limit))
-    else:
-        limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-        process_topics(limit)
+    args = parse_args()
+    merge_directory(args.scpa, args.meta, args.doc, args.ner, args.trm, args.out, args.limit)
+
+    # This was the old way of calling the code, to be deprecated
+    # limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
+    # process_topics(limit)

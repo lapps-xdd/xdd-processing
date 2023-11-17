@@ -1,6 +1,6 @@
 # Processing xDD Data
 
-Code for processing xDD filesonly useful if you have access to the xDD data.
+Code for processing xDD files, only useful if you have access to the xDD data.
 
 The document structure processing was done using the code in [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure).
 
@@ -50,7 +50,7 @@ Requires output from previous processing stages as well as a file with metadata.
 $ python merge.py --scpa DIR1 --doc DIR2 --ner DIR3 --trm DIR4 --meta FILE --out DIR5 [--limit N]
 ```
 
-For input we have ScienceParse results (DIR1), document parser results (DIR2), named entities (DIR3), terms (DIR4) and a metadata file. Output is written to DIR5.
+For input we have ScienceParse results (DIR1), document parser results (DIR2), named entities (DIR3), terms (DIR4) and a metadata file. Output is written to DIR5. See merge.py for example usage.
 
 
 ### 5. Preparing the database file
@@ -86,11 +86,11 @@ Takes merged files from DIR1 and creates a file `elastic.json` in DIR2. The file
 
 As of early April 2023, the sizes of source data (text and scienceparse) were as follows:
 
-|              | biomedical         | geoarchive            | molecular_physics  |
-| -------------| -------------------| --------------------- | ------------------ |
-| text         | 1000 files - 496Mb | 13789 files - 3,184Mb | 1000 files - 384Mb |
-| scienceparse | 9994 files - 552Mb | 13743 files - 3,069Mb | 997 files - 299Mb  |
-| merged       | 8017 files - 277Mb | 3488 files - 175Mb    | 7892 files - 242Mb |
+|              | biomedical          | geoarchive            | molecular_physics   |
+| -------------| --------------------| --------------------- | ------------------- |
+| text         | 10000 files - 496Mb | 13789 files - 3,184Mb | 10000 files - 384Mb |
+| scienceparse |  9994 files - 552Mb | 13743 files - 3,069Mb |  9997 files - 299Mb |
+| merged       |  8017 files - 277Mb |  3488 files - 175Mb   |  7892 files - 242Mb |
 
 The size after document processing was either in the same ballpark or up to 30% smaller because text that did not seem like language was removed. The processed\_pos directories were generated from the processed\_doc directories and were about twice as large for biomedical and molecular\_physics, but 60% of the size for the geoarchive topic. The latter happened because only the first 30K of data in each file was processed. And more text was truncated for geoarchive since the average file size in that topic was 162Kb, as opposed to 41Kb for biomedical and 34Kb for molecular\_physics. For merging we only kept files that had title, author and year fields.
 

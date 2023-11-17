@@ -1,14 +1,18 @@
 """Merging document information
 
-Takes the JSON created by the document parser (which itself used the output of ScienceParse),
-tranforms it into a more proper format for the AskMe database and adds in the named entities
-and the terms.
+Takes the output of ScienceParse, the matadata file and various outputs of prior processing,
+and tranforms it into a more proper format for the AskMe database.
 
-Usage:
+To get help on running the script:
 
-$ python merge [LIMIT]
+$ python merge.py -h
 
-Use LIMIT to limit the maximum number of files to process for each topic.
+Example use:
+
+$ export DIR=/Users/Shared/data/xdd/doc2vec/topic_doc2vecs/topic_samples/mars
+$ python merge.py \
+      --scpa $DIR/scienceparse --doc $DIR/output/doc --ner $DIR/output/ner \
+      --trm $DIR/output/trm --meta $DIR/metadata.json --out $DIR/output/mer
 
 
 TODO:

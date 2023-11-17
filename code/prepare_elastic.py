@@ -8,7 +8,7 @@ Assumes that INDIR containes the merged files and creates OUTDIR/elastic.json,
 which can be used for a bulk import.
 
 The --domain options adds a domain to each document (this is pending the addition
-of pre-processing funtionality to classify documents into domains) and --limit only
+of pre-processing functionality to classify documents into domains) and --limit only
 includes the first N documents from INDIR.
 
 Uses the following fields:

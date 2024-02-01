@@ -36,42 +36,21 @@ MAX_SIZE = 50000
 # from the database.
 SUMMARY_MAX_TOKENS = 2000
 
-# Metadata files. Information in these files can also be obtained by pinging the xDD API
-# at https://xdd.wisc.edu/api/articles. For example:
-# https://xdd.wisc.edu/api/articles?docids=5783bcafcf58f176c768f5cc,5754e291cf58f1b0c7844cd2
-METADATA = {
-    'biomedical': 'biomedical_docids_10k.bibjson',
-    'geoarchive': 'geoarchive.bibjson',
-    'molecular_physics': 'molecular_physics_docids_10k.bibjson' }
 
-
-def process_topics(limit: int):
-    for topic in TOPICS:
-        process_topic(topic, limit=limit)
-
-
-def process_topic(topic: str, limit: int):
-    sp_dir = os.path.join(TOPICS_DIR, topic, 'scienceparse')
-    doc_dir = os.path.join(TOPICS_DIR, topic, 'processed_doc')
-    ner_dir = os.path.join(TOPICS_DIR, topic, 'processed_ner')
-    trm_dir = os.path.join(TOPICS_DIR, topic, 'processed_trm')
-    out_dir = os.path.join(TOPICS_DIR, topic, 'processed_mer')
-    meta_file = os.path.join(TOPICS_DIR, topic, METADATA.get(topic))
+def merge_directory(
+        scpa_dir: str, meta_file: str, doc_dir: str, ner_dir: str, trm_dir: str,
+        out_dir: str, limit: int):
     os.makedirs(out_dir, exist_ok=True)
-    print(f'\nLoading {sp_dir}...')
-    print(f'Adding {ner_dir}...')
-    print(f'Writing to {out_dir}...\n')
-    terms_file = os.path.join(trm_dir, f'frequencies-{abbreviate_topic(topic)}.json')
+    terms_file = os.path.join(trm_dir, 'frequencies.json')
     terms = json.loads(open(terms_file).read())
     meta = load_metadata(meta_file)
     docs = os.listdir(doc_dir)
-    with open(f'log-merger-{topic}.log', 'w') as log:
+    with open(f'log-merger.log', 'w') as log:
         for doc in tqdm(sorted(docs)[:limit]):
-            # print(f'{doc}')
             # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
             # processed_doc file format: 54b4324ee138239d8684aeb2.json
             # processed_ner file format: 54b4324ee138239d8684aeb2.json
-            sp_obj = load_json(sp_dir, doc[:-5] + '_input.pdf.json')
+            sp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
             doc_obj = load_json(doc_dir, doc)
             ner_obj = load_json(ner_dir, doc)
             if 'entities' in ner_obj:
@@ -196,44 +175,9 @@ def parse_args():
     return parser.parse_args()
 
 
-def merge_directory(
-        scpa_dir: str, meta_file: str, doc_dir: str, ner_dir: str, trm_dir: str,
-        out_dir: str, limit: int):
-    os.makedirs(out_dir, exist_ok=True)
-    terms_file = os.path.join(trm_dir, 'frequencies.json')
-    terms = json.loads(open(terms_file).read())
-    meta = load_metadata(meta_file)
-    docs = os.listdir(doc_dir)
-    with open(f'log-merger.log', 'w') as log:
-        for doc in tqdm(sorted(docs)[:limit]):
-            # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
-            # processed_doc file format: 54b4324ee138239d8684aeb2.json
-            # processed_ner file format: 54b4324ee138239d8684aeb2.json
-            sp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
-            doc_obj = load_json(doc_dir, doc)
-            ner_obj = load_json(ner_dir, doc)
-            if 'entities' in ner_obj:
-                ner_obj['entities'] = sanitize_entities(ner_obj['entities'])
-            identifier = os.path.splitext(doc)[0]
-            trm_obj = terms.get(identifier, [])
-            try:
-                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj, meta)
-                if valid_merger(merged_obj):
-                    with open(os.path.join(out_dir, doc), 'w') as fh:
-                        json.dump(merged_obj, fh, indent=2)
-                else:
-                    log.write(f'{doc} -- object from merger was not complete\n')
-                    #with open(os.path.join(out_dir, doc), 'w') as fh:
-                    #    json.dump(merged_obj, fh, indent=2)
-            except Exception as e:
-                log.write(f'{doc} -- {e}\n')
 
 
 if __name__ == '__main__':
 
     args = parse_args()
     merge_directory(args.scpa, args.meta, args.doc, args.ner, args.trm, args.out, args.limit)
-
-    # This was the old way of calling the code, to be deprecated
-    # limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    # process_topics(limit)

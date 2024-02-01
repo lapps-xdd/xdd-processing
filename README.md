@@ -1,17 +1,16 @@
 # Processing xDD Data
 
-Code for processing xDD files, only useful if you have access to the xDD data.
+Code for processing xDD files, only useful if you have access to the xDD data
 
-The document structure processing was done using the code in [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure).
-
-
-There are several processing steps:
+Processing involves several steps, some of them done in this repository:
 
 1. Document structure parsing (done using the code in [https://github.com/lapps-xdd/xdd-docstructure](https://github.com/lapps-xdd/xdd-docstructure)).
 2. Extracting named entities with spaCy.
 3. Generating term lists (done using the code in [https://github.com/lapps-xdd/xdd-terms](https://github.com/lapps-xdd/xdd-temrs)).
-4. Merging document structure, named entities, temrs and metadata.
+4. Merging document structure, named entities, terms and metadata.
 5. Preparing the file that will be imported into the database.
+
+To see how to integrate all this processing see [xdd-integration](https://github.com/lapps-xdd/xdd-integration).
 
 
 ### 1. Document structure parsing
@@ -34,7 +33,7 @@ To run the script do
 $ python ner.py --doc DIR1 --pos DIR2 --ner DIR3 [--limit N]
 ```
 
-The input in DIR1 should have files with the output from the document structure parser. part-of-speech data is written to DIR 2 and named entities to DIR3. If LIMIT is used than nomore than N files wiil be processed.
+The input in DIR1 should have files with the output from the document structure parser. Part-of-speech data is written to DIR2 and named entities to DIR3. If LIMIT is used than no more than N files will be processed.
 
 
 ### 3. Term extraction

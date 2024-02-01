@@ -9,14 +9,12 @@ $ python -m spacy download en_core_web_sm
 
 Usage:
 
-$ python ner.py [LIMIT]
+$ python usage: ner.py [-h] [--doc DOC] [--pos POS] [--ner NER] [--limit LIMIT]
 
-Without LIMIT all files in each topic directory are processed. 
+Without LIMIT all files in the DOC directory are processed.
 
 Only the first N characters of the data will be processed, the exact size is set
-by the MAX_SIZE valiable
-
-Uses a hard-code directory path in config.
+by the MAX_SIZE variable.
 
 """
 
@@ -25,7 +23,7 @@ from collections import Counter
 import spacy
 from tqdm import tqdm
 import frequencies, utils
-from config import TOPICS_DIR, data_directory, ENTITY_TYPES
+from config import ENTITY_TYPES
 
 nlp = spacy.load("en_core_web_sm")
 
@@ -33,41 +31,27 @@ nlp = spacy.load("en_core_web_sm")
 # a limit on how much data we want to process for each file
 MAX_SIZE = 30000
 
+# load the 500 most frequent English words
 FREQUENT_ENGLISH_WORDS = set(
     [line.split()[1] for line in frequencies.FREQUENCIES.split('\n') if line])
 
 
-DOC_SUBDIR = 'processed_doc'
-POS_SUBDIR = 'processed_pos'
-NER_SUBDIR = 'processed_ner'
-
-
-def process_topics(limit=sys.maxsize):
-    for topic in TOPICS:
-        process_topic(topic, limit=limit)
-    print()
-
-def process_topic(topic: str, limit: int):
-    # TODO: those directories should not be hard-coded, they are also in the 
-    # config file as a list.
-    in_dir = data_directory(topic, DOC_SUBDIR)
-    pos_dir = data_directory(topic, POS_SUBDIR)
-    ner_dir = data_directory(topic, NER_SUBDIR)
+def process_directory(doc_dir: str, pos_dir: str, ner_dir: str, limit: int):
+    """Run NER over all documents in doc_dir and write part-of-speech output to
+    pos_dir and named entities to ner_dir."""
     os.makedirs(pos_dir, exist_ok=True)
     os.makedirs(ner_dir, exist_ok=True)
-    print(f'\nProcessing {in_dir}...')
+    print(f'\nProcessing {doc_dir}...')
     print(f'Writing to {pos_dir}...')
     print(f'Writing to {ner_dir}...\n')
-    docs = os.listdir(in_dir)
-    with open(f'log-{topic}.txt', 'w') as log:
+    docs = os.listdir(doc_dir)
+    with open('log-preprocessing-ner.txt', 'w') as log:
         n = 1
         for doc in tqdm(list(sorted(docs))[:limit]):
             n += 1
             try:
                 t0 = time.time()
-                # if not '54b4324ee138239d8684aeb2' in doc:
-                #     continue
-                entities, paragraphs = process_doc(in_dir, doc, n + 1)
+                entities, paragraphs = process_doc(doc_dir, doc, n + 1)
                 write_entities(ner_dir, doc, entities)
                 write_tokens(pos_dir, doc, paragraphs)
                 elapsed = time.time() - t0
@@ -75,8 +59,9 @@ def process_topic(topic: str, limit: int):
             except Exception as e:
                 log.write(f'{doc}\t{e}\n')
 
-def process_doc(topic_dir: str, doc: str, n: int):
-    fname = os.path.join(topic_dir, doc)
+
+def process_doc(doc_dir: str, doc: str, n: int):
+    fname = os.path.join(doc_dir, doc)
     entities = {}
     paragraphs = []
     with open(fname) as fh:
@@ -129,7 +114,7 @@ def write_entities(ner_dir, doc, entities):
     with open(os.path.join(ner_dir, doc), 'w') as fh:
         json.dump(answer, fh, indent=2)
 
-             
+
 def write_tokens(pos_dir, doc, paragraphs):
     txt_doc = os.path.splitext(doc)[0] + '.txt'
     with open(os.path.join(pos_dir, txt_doc), 'w') as fh:
@@ -157,16 +142,6 @@ def write_token(fh, t):
     fh.write(f'{line}\n')
 
 
-def write_token2(t):
-    text = t.text.strip()
-    lemma = t.lemma_.strip()
-    ent_type = t.ent_type_ if t.ent_type_ in ENTITY_TYPES else ''
-    elements = [t.i, text, lemma, t.pos_, t.tag_, ent_type]
-    elements = [str(e) for e in elements]
-    line = "\t".join(elements)
-    print(f'{line}')
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description='Run NER over xDD files')
     parser.add_argument('--doc', help="directory with document structure parses")
@@ -177,35 +152,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def process_directory(doc_dir: str, pos_dir: str, ner_dir: str, limit: int):
-    """Run NER over all documents in doc_dir and write part-of-speech output to
-    pos_dir and named entities to ner_dir.""" 
-    os.makedirs(pos_dir, exist_ok=True)
-    os.makedirs(ner_dir, exist_ok=True)
-    print(f'\nProcessing {doc_dir}...')
-    print(f'Writing to {pos_dir}...')
-    print(f'Writing to {ner_dir}...\n')
-    docs = os.listdir(doc_dir)
-    with open('log-preprocessing-ner.txt', 'w') as log:
-        n = 1
-        for doc in tqdm(list(sorted(docs))[:limit]):
-            n += 1
-            try:
-                t0 = time.time()
-                entities, paragraphs = process_doc(doc_dir, doc, n + 1)
-                write_entities(ner_dir, doc, entities)
-                write_tokens(pos_dir, doc, paragraphs)
-                elapsed = time.time() - t0
-                log.write(f'{doc}\t{elapsed:.2f}\n')
-            except Exception as e:
-                log.write(f'{doc}\t{e}\n')
-
 
 if __name__ == '__main__':
 
     args = parse_args()
     process_directory(args.doc, args.pos, args.ner, args.limit)
-
-    # This was the old entry point into the code
-    # limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    # process_topics(limit)

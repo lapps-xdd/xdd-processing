@@ -20,3 +20,11 @@ def data_directory(topic: str, data_dir: str):
 
 def abbreviate_topic(topic: str):
     return ABBREVIATIONS.get(topic)
+
+
+# New datastructure, eventually to replace some of the above
+TOPIC_IDX = {
+    'bio': ('biomedical', os.path.join(TOPICS_DIR, 'biomedical')),
+    'geo': ('geoarchive', os.path.join(TOPICS_DIR, 'geoarchive')),
+    'mol': ('molecular_physics', os.path.join(TOPICS_DIR, 'molecular_physics')),
+}

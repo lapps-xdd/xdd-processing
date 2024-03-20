@@ -28,7 +28,7 @@ from config import TOPICS_DIR, TOPICS, abbreviate_topic, ENTITY_TYPES
 
 # A limit on how much data we want to put in the abstract and text fields for each
 # document, now this is set to the same number as for spaCy processing.
-MAX_SIZE = 50000
+MAX_SIZE = 25000
 
 # In addition, we enter a summary, with just the data that will be returned from the
 # database. Any processing for ranking will be done using just these data. Setting it

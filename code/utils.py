@@ -1,4 +1,6 @@
 from collections import Counter
+from datetime import datetime
+
 
 # average_token_length() and language_score() were originally taken from the
 # utils.py file in https://github.com/lapps-xdd/xdd-docstructure
@@ -36,3 +38,7 @@ def singletons_per_token(tokens: list) -> float:
         return len(singletons) / len(tokens)
     except ZeroDivisionError:
         return 0.0
+
+
+def timestamp():
+    return datetime.strftime(datetime.now(), '%Y%m%d:%H%M%S')

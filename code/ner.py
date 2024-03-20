@@ -20,6 +20,7 @@ by the MAX_SIZE variable.
 
 import os, sys, json, time, argparse
 from collections import Counter
+from pathlib import Path
 import spacy
 from tqdm import tqdm
 import frequencies, utils
@@ -29,14 +30,16 @@ nlp = spacy.load("en_core_web_sm")
 
 
 # a limit on how much data we want to process for each file
-MAX_SIZE = 30000
+MAX_SIZE = 25000
 
 # load the 500 most frequent English words
 FREQUENT_ENGLISH_WORDS = set(
     [line.split()[1] for line in frequencies.FREQUENCIES.split('\n') if line])
 
 
-def process_directory(doc_dir: str, pos_dir: str, ner_dir: str, limit: int):
+def process_directory(
+        doc_dir: str, pos_dir: str, ner_dir: str,
+        limit: int = sys.maxsize, overwrite: bool = False):
     """Run NER over all documents in doc_dir and write part-of-speech output to
     pos_dir and named entities to ner_dir."""
     os.makedirs(pos_dir, exist_ok=True)
@@ -45,12 +48,25 @@ def process_directory(doc_dir: str, pos_dir: str, ner_dir: str, limit: int):
     print(f'Writing to {pos_dir}...')
     print(f'Writing to {ner_dir}...\n')
     docs = os.listdir(doc_dir)
-    with open('log-preprocessing-ner.txt', 'w') as log:
+
+    logfile = f'logs/processing-ner-{utils.timestamp()}.txt'
+    with open(logfile, 'w') as log:
+        log.write(f'# SCRIPT     =  ner.py\n')
+        log.write(f'# INPUT      =  {doc_dir}\n')
+        log.write(f'# OUTPUT     =  {pos_dir}\n')
+        log.write(f'# OUTPUT     =  {ner_dir}\n')
+        log.write(f'# OVERWRITE  =  {str(overwrite)}\n')
+        log.write(f'# LIMIT:     =  {limit}\n\n')
         n = 1
         for doc in tqdm(list(sorted(docs))[:limit]):
             n += 1
             try:
                 t0 = time.time()
+                # TODO
+                # if overwrite is False, test whether the output already exists
+                # and do not process the document if so
+                if not overwrite and output_exists(doc, pos_dir, ner_dir):
+                    continue
                 entities, paragraphs = process_doc(doc_dir, doc, n + 1)
                 write_entities(ner_dir, doc, entities)
                 write_tokens(pos_dir, doc, paragraphs)
@@ -66,10 +82,12 @@ def process_doc(doc_dir: str, doc: str, n: int):
     paragraphs = []
     with open(fname) as fh:
         json_obj = json.load(fh)
-        size = os.path.getsize(fname)
+        title = get_title(json_obj)
+        abstract = get_abstract(json_obj)
         sections = json_obj['sections']
-        total_size = 0
-        # TODO: should also run over the abstract and the title!!!
+        run_spacy(title, entities, paragraphs)
+        run_spacy(abstract, entities, paragraphs)
+        total_size = len(title) + len(abstract)
         if sections is not None:
             for section in sections:
                 text = section['text']
@@ -78,6 +96,22 @@ def process_doc(doc_dir: str, doc: str, n: int):
                     break
                 run_spacy(text, entities, paragraphs)
     return entities, paragraphs
+
+
+def output_exists(doc: str, pos_dir: str, ner_dir: str):
+    pos_file = Path(pos_dir, f'{doc[:-5]}.txt')
+    ner_file = Path(ner_dir, f'{doc}')
+    return pos_file.exists() and ner_file.exists()
+
+def get_title(json_obj):
+    title = json_obj.get('title')
+    return title or ''
+
+
+def get_abstract(json_obj):
+    abstract = json_obj.get('abstract')
+    abstract = '' if abstract is None else abstract.get('abstract')
+    return abstract or ''
 
 
 def run_spacy(text, entities, paragraphs):
@@ -149,6 +183,7 @@ def parse_args():
     parser.add_argument('--ner', help="output directory for NER data")
     parser.add_argument('--limit', help="Maximum number of documents to process",
                         type=int, default=sys.maxsize)
+    parser.add_argument('--overwrite', help="Overwrite prior output", action='store_true')
     return parser.parse_args()
 
 
@@ -156,4 +191,4 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    process_directory(args.doc, args.pos, args.ner, args.limit)
+    process_directory(args.doc, args.pos, args.ner, args.limit, args.overwrite)

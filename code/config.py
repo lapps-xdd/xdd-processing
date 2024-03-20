@@ -1,14 +1,16 @@
 import os
 
 # location of all the topics
-TOPICS_DIR = '/Users/Shared/data/xdd/doc2vec/topic_doc2vecs'
+TOPICS_DIR = '/Users/Shared/data/xdd/topics'
 
-# list of topics
-TOPICS = ('biomedical',  'geoarchive', 'molecular_physics')
+# list of topics, excluding covid-19 for now
+TOPICS = (
+    'biomedical', 'geoarchive', 'molecular-physics',
+    'climate-change-modeling', 'cultivars', 'mars', 'random')
 ABBREVIATIONS = {t: t[:3] for t in TOPICS}
 
 # data directories of source data and processing layers
-DATA_DIRS = ('text', 'scienceparse', 'processed_doc', 'processed_ner', 'processed_pos')
+DATA_DIRS = ('text', 'scienceparse', 'output/doc', 'output/ner', 'output/pos')
 
 # Interesting entity types, not included are for example 'CARDINAL', 'DATE',
 # 'LANGUAGE', 'LAW', 'ORDINAL', 'PERCENT', 'QUANTITY', 'PRODUCT' and 'WORK_OF_ART'
@@ -26,5 +28,5 @@ def abbreviate_topic(topic: str):
 TOPIC_IDX = {
     'bio': ('biomedical', os.path.join(TOPICS_DIR, 'biomedical')),
     'geo': ('geoarchive', os.path.join(TOPICS_DIR, 'geoarchive')),
-    'mol': ('molecular_physics', os.path.join(TOPICS_DIR, 'molecular_physics')),
+    'mol': ('molecular_physics', os.path.join(TOPICS_DIR, 'molecular-physics')),
 }

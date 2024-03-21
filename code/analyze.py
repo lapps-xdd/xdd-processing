@@ -32,6 +32,8 @@ def analyze_topic(topic: str, write_overview: bool):
         ftimes = [os.stat(f).st_birthtime for f in fnames]
         ftimes = list(sorted(ftimes))
         number_of_files = len(fnames)
+        if number_of_files == 0:
+            continue
         total_size = int(sum([pair[0] for pair in fsizes]) / 1000000)
         average_size = int(total_size * 1000 / number_of_files)
         elapsed_time = str(int(ftimes[-1] - ftimes[0]))
@@ -49,7 +51,7 @@ def analyze_topic(topic: str, write_overview: bool):
                     fh.write('<tr>\n')
                     fh.write(f'  <td>{n}</td>\n')
                     fh.write(f'  <td>{fsize}</td>\n')
-                    fh.write(f'  <td><a href="{path}/{fname}"">{fname}</a></td>\n')
+                    fh.write(f'  <td><a href="{path}/{fname}">{fname}</a></td>\n')
                     fh.write('</tr>\n')
                 fh.write('</table>\n')
                 fh.write('</html>\n')

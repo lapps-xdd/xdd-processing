@@ -18,6 +18,9 @@ by the MAX_SIZE variable.
 
 """
 
+# TODO: add the domain/topic name to the log file
+
+
 import os, sys, json, time, argparse
 from collections import Counter
 from pathlib import Path
@@ -62,9 +65,7 @@ def process_directory(
             n += 1
             try:
                 t0 = time.time()
-                # TODO
-                # if overwrite is False, test whether the output already exists
-                # and do not process the document if so
+                # skip if the output lready exists and you are not overwriting
                 if not overwrite and output_exists(doc, pos_dir, ner_dir):
                     continue
                 entities, paragraphs = process_doc(doc_dir, doc, n + 1)

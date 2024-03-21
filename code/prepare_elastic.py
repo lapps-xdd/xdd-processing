@@ -17,7 +17,7 @@ Uses the following fields:
 - title
 - authors
 - abstract
-- text
+- content
 - summary
 - entities
 - terms
@@ -44,56 +44,57 @@ $ curl -X GET "http://localhost:9200/test/_mapping?pretty"
 """
 
 import os, sys, json, argparse
+from utils import fix_terms
 
 ELASTIC_FILE = 'elastic.json'
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Parse xDD files')
-    parser.add_argument('-i', help="input directory")
-    parser.add_argument('-o', help="output directory")
-    parser.add_argument('--domain', help="Domain of the document", default=None)
-    parser.add_argument('--limit', help="Maximum number of documents to process", default=sys.maxsize)
+    def tags(tagstring: str):
+        return tagstring.split(',')
+    parser = argparse.ArgumentParser(
+        description='Convert merged files into ElasticSearch import file')
+    parser.add_argument('-i', metavar='PATH', help="input directory")
+    parser.add_argument('-o', metavar='PATH', help="output directory")
+    parser.add_argument('--tags', help="comma-separated list of tags", default=[], type=tags)
+    parser.add_argument('--limit', help="number of documents to process", default=sys.maxsize, type=int)
     return parser.parse_args()
 
 
-def prepare(indir: str, outdir: str, domain: str, limit: int):
+def prepare(indir: str, outdir: str, tags: list, limit: int):
     fnames = [os.path.join(indir, fname) for fname in os.listdir(indir)]
-    elastic_file = os.path.join(outdir, ELASTIC_FILE)
-    print(f'Creating {elastic_file}')
+    elastic_fname = os.path.join(outdir, ELASTIC_FILE)
+    print(f'Creating elastic bulk file {elastic_fname}')
     os.makedirs(outdir, exist_ok=True)
-    with open(elastic_file, 'w') as fh:
+    with open(elastic_fname, 'w') as fh:
         for n, fname in enumerate(sorted(fnames)):
             if n and n % 100 == 0:
                 print(n)
             if n + 1 > limit:
                 break
             json_obj = json.load(open(fname))
-            elastic_obj = { "domain": domain }
-            for field in ('name', 'year', 'title', 'authors', 'url', 'abstract',
-                          'text', 'summary', 'terms'):
-                elastic_obj[field] = json_obj[field]
-            elastic_obj['entities'] = {}
-            for entity_type, dictionary in json_obj.get('entities', {}).items():
-                elastic_obj['entities'][entity_type] = \
-                    [(entity, str(count)) for entity, count in dictionary.items()]
-            fix_terms(elastic_obj)
+            elastic_obj = create_elastic_object(json_obj, tags)
             fh.write(json.dumps({"index": {"_id": json_obj['name']}}) + '\n')
             fh.write(json.dumps(elastic_obj) + '\n')
         fh.write('\n')
 
 
-def fix_terms(elastic_obj: dict):
-    """Elastic search does not allow lists with different types so turning the integer
-    and the float into strings."""
-    # TODO: consider using dictionaries
-    for term_triple in elastic_obj['terms']:
-        term_triple[1] = str(term_triple[1])
-        term_triple[2] = "%.6f" % term_triple[2]
+def create_elastic_object(json_obj: dict, tags: list):
+    """Creates a dictionary meant for bul import into ElasticSearch."""
+    elastic_obj = {"tags": tags}
+    for field in ('name', 'year', 'title', 'authors', 'url', 'abstract',
+                  'content', 'summary', 'terms'):
+        elastic_obj[field] = json_obj[field]
+    elastic_obj['entities'] = {}
+    for entity_type, dictionary in json_obj.get('entities', {}).items():
+        elastic_obj['entities'][entity_type] = \
+            [(entity, str(count)) for entity, count in dictionary.items()]
+    fix_terms(elastic_obj)
+    return elastic_obj
 
 
 
 if __name__ in '__main__':
 
     args = parse_args()
-    prepare(args.i, args.o, args.domain, int(args.limit))
+    prepare(args.i, args.o, args.tags, int(args.limit))

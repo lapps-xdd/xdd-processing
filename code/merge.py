@@ -24,6 +24,7 @@ import os, sys, json, argparse
 from collections import Counter
 from io import StringIO
 from tqdm import tqdm
+from utils import timestamp
 from config import TOPICS_DIR, TOPICS, abbreviate_topic, ENTITY_TYPES
 
 # A limit on how much data we want to put in the abstract and text fields for each
@@ -45,12 +46,12 @@ def merge_directory(
     terms = json.loads(open(terms_file).read())
     meta = load_metadata(meta_file)
     docs = os.listdir(doc_dir)
-    with open(f'log-merger.log', 'w') as log:
+    with open(f'logs/merger-{timestamp()}.log', 'w') as log:
         for doc in tqdm(sorted(docs)[:limit]):
             # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
             # processed_doc file format: 54b4324ee138239d8684aeb2.json
             # processed_ner file format: 54b4324ee138239d8684aeb2.json
-            sp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
+            scp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
             doc_obj = load_json(doc_dir, doc)
             ner_obj = load_json(ner_dir, doc)
             if 'entities' in ner_obj:
@@ -58,7 +59,7 @@ def merge_directory(
             identifier = os.path.splitext(doc)[0]
             trm_obj = terms.get(identifier, [])
             try:
-                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj, meta)
+                merged_obj = merge(doc, scp_obj, doc_obj, ner_obj, trm_obj, meta)
                 if valid_merger(merged_obj):
                     with open(os.path.join(out_dir, doc), 'w') as fh:
                         json.dump(merged_obj, fh, indent=2)
@@ -67,7 +68,8 @@ def merge_directory(
                     #with open(os.path.join(out_dir, doc), 'w') as fh:
                     #    json.dump(merged_obj, fh, indent=2)
             except Exception as e:
-                log.write(f'{doc} -- {e}\n')
+                exception_type = type(e).__name__
+                log.write(f'{doc} -- {exception_type} - {e}\n')
 
 
 def sanitize_entities(ner_obj: dict):
@@ -100,7 +102,7 @@ def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict, m
     merged_obj['url'] = get_url(merged_obj['name'], meta)
     merged_obj['authors'] = get_meta('authors', sp_obj)
     merged_obj['abstract'] = get_abstract(doc_obj)
-    merged_obj['text'] = get_text(doc_obj)
+    merged_obj['content'] = get_text(doc_obj)
     merged_obj['summary'] = get_summary(merged_obj)
     merged_obj['entities'] = ner_obj.get('entities', {})
     merged_obj['terms'] = trm_obj
@@ -150,7 +152,7 @@ def get_text(doc_obj: dict):
 def get_summary(merged_obj: dict):
     """Get a summary by concatenating the abstact and the text while staying within
     the maximum number of tokens allowed."""
-    summary = merged_obj['abstract'] + ' ' + merged_obj['text']
+    summary = merged_obj['abstract'] + ' ' + merged_obj['content']
     return ' '.join(summary.split()[:SUMMARY_MAX_TOKENS])
     
 
@@ -159,7 +161,6 @@ def valid_merger(merged_obj: dict):
         if not merged_obj[field]:
             return False
     return True
-
 
 
 def parse_args():
@@ -173,7 +174,6 @@ def parse_args():
     parser.add_argument('--limit', help="Maximum number of documents to process",
                         type=int, default=sys.maxsize)
     return parser.parse_args()
-
 
 
 

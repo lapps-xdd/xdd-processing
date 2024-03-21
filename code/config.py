@@ -10,7 +10,8 @@ TOPICS = (
 ABBREVIATIONS = {t: t[:3] for t in TOPICS}
 
 # data directories of source data and processing layers
-DATA_DIRS = ('text', 'scienceparse', 'output/doc', 'output/ner', 'output/pos')
+DATA_DIRS = ('text', 'scienceparse',
+             'output/doc', 'output/ner', 'output/pos', 'output/mer')
 
 # Interesting entity types, not included are for example 'CARDINAL', 'DATE',
 # 'LANGUAGE', 'LAW', 'ORDINAL', 'PERCENT', 'QUANTITY', 'PRODUCT' and 'WORK_OF_ART'

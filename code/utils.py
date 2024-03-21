@@ -42,3 +42,12 @@ def singletons_per_token(tokens: list) -> float:
 
 def timestamp():
     return datetime.strftime(datetime.now(), '%Y%m%d:%H%M%S')
+
+
+def fix_terms(elastic_obj: dict):
+    """Elastic search does not allow lists with different types so turning the integer
+    and the float into strings."""
+    # TODO: consider using dictionaries
+    for term_triple in elastic_obj['terms']:
+        term_triple[1] = str(term_triple[1])
+        term_triple[2] = "%.6f" % term_triple[2]

@@ -17,7 +17,7 @@ Uses the following fields:
 - title
 - authors
 - abstract
-- content
+- content/text
 - summary
 - entities
 - terms
@@ -44,7 +44,7 @@ $ curl -X GET "http://localhost:9200/test/_mapping?pretty"
 """
 
 import os, sys, json, argparse
-from utils import fix_terms
+from utils import create_elastic_object
 
 ELASTIC_FILE = 'elastic.json'
 
@@ -56,8 +56,10 @@ def parse_args():
         description='Convert merged files into ElasticSearch import file')
     parser.add_argument('-i', metavar='PATH', help="input directory")
     parser.add_argument('-o', metavar='PATH', help="output directory")
-    parser.add_argument('--tags', help="comma-separated list of tags", default=[], type=tags)
-    parser.add_argument('--limit', help="number of documents to process", default=sys.maxsize, type=int)
+    parser.add_argument(
+        '--tags', help="comma-separated list of tags", default=[], type=tags)
+    parser.add_argument(
+        '--limit', help="number of documents to process", default=sys.maxsize, type=int)
     return parser.parse_args()
 
 
@@ -69,32 +71,18 @@ def prepare(indir: str, outdir: str, tags: list, limit: int):
     with open(elastic_fname, 'w') as fh:
         for n, fname in enumerate(sorted(fnames)):
             if n and n % 100 == 0:
-                print(n)
+                print(n, end=' ')
             if n + 1 > limit:
                 break
             json_obj = json.load(open(fname))
             elastic_obj = create_elastic_object(json_obj, tags)
             fh.write(json.dumps({"index": {"_id": json_obj['name']}}) + '\n')
             fh.write(json.dumps(elastic_obj) + '\n')
+        print()
         fh.write('\n')
-
-
-def create_elastic_object(json_obj: dict, tags: list):
-    """Creates a dictionary meant for bul import into ElasticSearch."""
-    elastic_obj = {"tags": tags}
-    for field in ('name', 'year', 'title', 'authors', 'url', 'abstract',
-                  'content', 'summary', 'terms'):
-        elastic_obj[field] = json_obj[field]
-    elastic_obj['entities'] = {}
-    for entity_type, dictionary in json_obj.get('entities', {}).items():
-        elastic_obj['entities'][entity_type] = \
-            [(entity, str(count)) for entity, count in dictionary.items()]
-    fix_terms(elastic_obj)
-    return elastic_obj
-
 
 
 if __name__ in '__main__':
 
     args = parse_args()
-    prepare(args.i, args.o, args.tags, int(args.limit))
+    prepare(args.i, args.o, args.tags, args.limit)

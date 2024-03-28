@@ -44,6 +44,24 @@ def timestamp():
     return datetime.strftime(datetime.now(), '%Y%m%d:%H%M%S')
 
 
+def create_elastic_object(json_obj: dict, tags: list):
+    """Creates a dictionary meant for bulk import into ElasticSearch."""
+    elastic_obj = {"tags": tags}
+    for field in ('name', 'year', 'title', 'authors', 'url', 'abstract',
+                  'content', 'summary', 'terms'):
+        if field in json_obj:
+            elastic_obj[field] = json_obj[field]
+        # TODO: still need to do this for some data, but should be deprecated soon
+        elif field == 'content':
+            elastic_obj[field] = json_obj['text']
+    elastic_obj['entities'] = {}
+    for entity_type, dictionary in json_obj.get('entities', {}).items():
+        elastic_obj['entities'][entity_type] = \
+            [(entity, str(count)) for entity, count in dictionary.items()]
+    fix_terms(elastic_obj)
+    return elastic_obj
+
+
 def fix_terms(elastic_obj: dict):
     """Elastic search does not allow lists with different types so turning the integer
     and the float into strings."""

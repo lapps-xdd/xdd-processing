@@ -1,5 +1,7 @@
 # Convenience script to run some processing on a directory.
 #
+# Requires jq to be installed
+#
 # Assumes that this is run from the code directory (one level up from this script)
 # and that the xdd-docprocessing and xdd-terms repositories are sisters of this
 # repository.
@@ -64,6 +66,7 @@ elif [ $mode == 'mer' ]; then
 	echo "Running merging code and creating ElasticSearch input"
 	python merge.py --scpa $data/scienceparse --doc $data/output/doc --ner $data/output/ner --trm $data/output/trm --meta $data/metadata.json --out $data/output/mer
 	python prepare_elastic.py -i $data/output/mer -o $data/output/ela --tags $tags
+	head -2 $data/output/ela/elastic.json | tail -1 | jq > $data/output/ela/example.json
 
 fi
 

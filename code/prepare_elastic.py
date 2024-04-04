@@ -2,14 +2,15 @@
 
 Takes the output of the merge.py script and creates input for ElasticSearch. 
 
-$ python prepare_elastic.py -i INDIR -o OUTDIR [--domain DOMAIN] [--limit N]
+$ python prepare_elastic.py -i INDIR -o OUTDIR [--tags DOMAIN] [--limit N]
 
 Assumes that INDIR containes the merged files and creates OUTDIR/elastic.json,
 which can be used for a bulk import.
 
-The --domain options adds a domain to each document (this is pending the addition
-of pre-processing functionality to classify documents into domains) and --limit only
-includes the first N documents from INDIR.
+The --tags option takes a comma-separated string where each string is added as a
+tag to each document (this is pending the addition of pre-processing functionality
+to classify documents into domains). Using --limit you can restinctprocessing to
+the first N documents from INDIR.
 
 Uses the following fields:
 - name

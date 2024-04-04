@@ -1,6 +1,6 @@
 from collections import Counter
 from datetime import datetime
-
+from config import MERGED_FIELDS
 
 # average_token_length() and language_score() were originally taken from the
 # utils.py file in https://github.com/lapps-xdd/xdd-docstructure
@@ -47,8 +47,7 @@ def timestamp():
 def create_elastic_object(json_obj: dict, tags: list):
     """Creates a dictionary meant for bulk import into ElasticSearch."""
     elastic_obj = {"tags": tags}
-    for field in ('name', 'year', 'title', 'authors', 'url', 'abstract',
-                  'content', 'summary', 'terms'):
+    for field in MERGED_FIELDS:
         if field in json_obj:
             elastic_obj[field] = json_obj[field]
         # TODO: still need to do this for some data, but should be deprecated soon

@@ -11,9 +11,9 @@
 # $ bash run.sh -d DIRECTORY -m MODE -t TAGS
 #
 # The -d option is the directory to run this on, it should have a file name
-# metadata.json as well as subdirectories scienceparse, output/doc, output/ner
-# and output/trm. The -m option indicates the mode and the -t option is a
-# comma-separated list of tags.
+# metadata.json as well as subdirectories scienceparse and text. The -m option
+# indicates the mode and the -t option is a comma-separated list of tags, which
+# are only used for the merging mode.
 #
 # There are five modes:
 #

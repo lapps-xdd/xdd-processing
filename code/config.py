@@ -17,6 +17,10 @@ DATA_DIRS = ('text', 'scienceparse',
 # 'LANGUAGE', 'LAW', 'ORDINAL', 'PERCENT', 'QUANTITY', 'PRODUCT' and 'WORK_OF_ART'
 ENTITY_TYPES = set(['FAC', 'GPE', 'LOC', 'NORP',  'ORG',  'PERSON'])
 
+# Fields that are expected to be in the result of the merging
+MERGED_FIELDS = ('name', 'year', 'title', 'authors', 'url', 'abstract',
+                 'content', 'summary', 'terms')
+
 
 def data_directory(topic: str, data_dir: str):
     return os.path.join(TOPICS_DIR, topic, data_dir)

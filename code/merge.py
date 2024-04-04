@@ -1,14 +1,18 @@
 """Merging document information
 
-Takes the JSON created by the document parser (which itself used the output of ScienceParse),
-tranforms it into a more proper format for the AskMe database and adds in the named entities
-and the terms.
+Takes the output of ScienceParse, the matadata file and various outputs of prior processing,
+and tranforms it into a more proper format for the AskMe database.
 
-Usage:
+To get help on running the script:
 
-$ python merge [LIMIT]
+$ python merge.py -h
 
-Use LIMIT to limit the maximum number of files to process for each topic.
+Example use:
+
+$ export DIR=/Users/Shared/data/xdd/doc2vec/topic_doc2vecs/topic_samples/mars
+$ python merge.py \
+      --scpa $DIR/scienceparse --doc $DIR/output/doc --ner $DIR/output/ner \
+      --trm $DIR/output/trm --meta $DIR/metadata.json --out $DIR/output/mer
 
 
 TODO:
@@ -20,11 +24,12 @@ import os, sys, json, argparse
 from collections import Counter
 from io import StringIO
 from tqdm import tqdm
+from utils import timestamp
 from config import TOPICS_DIR, TOPICS, abbreviate_topic, ENTITY_TYPES
 
 # A limit on how much data we want to put in the abstract and text fields for each
 # document, now this is set to the same number as for spaCy processing.
-MAX_SIZE = 50000
+MAX_SIZE = 25000
 
 # In addition, we enter a summary, with just the data that will be returned from the
 # database. Any processing for ranking will be done using just these data. Setting it
@@ -32,42 +37,21 @@ MAX_SIZE = 50000
 # from the database.
 SUMMARY_MAX_TOKENS = 2000
 
-# Metadata files. Information in these files can also be obtained by pinging the xDD API
-# at https://xdd.wisc.edu/api/articles. For example:
-# https://xdd.wisc.edu/api/articles?docids=5783bcafcf58f176c768f5cc,5754e291cf58f1b0c7844cd2
-METADATA = {
-    'biomedical': 'biomedical_docids_10k.bibjson',
-    'geoarchive': 'geoarchive.bibjson',
-    'molecular_physics': 'molecular_physics_docids_10k.bibjson' }
 
-
-def process_topics(limit: int):
-    for topic in TOPICS:
-        process_topic(topic, limit=limit)
-
-
-def process_topic(topic: str, limit: int):
-    sp_dir = os.path.join(TOPICS_DIR, topic, 'scienceparse')
-    doc_dir = os.path.join(TOPICS_DIR, topic, 'processed_doc')
-    ner_dir = os.path.join(TOPICS_DIR, topic, 'processed_ner')
-    trm_dir = os.path.join(TOPICS_DIR, topic, 'processed_trm')
-    out_dir = os.path.join(TOPICS_DIR, topic, 'processed_mer')
-    meta_file = os.path.join(TOPICS_DIR, topic, METADATA.get(topic))
+def merge_directory(
+        scpa_dir: str, meta_file: str, doc_dir: str, ner_dir: str, trm_dir: str,
+        out_dir: str, limit: int):
     os.makedirs(out_dir, exist_ok=True)
-    print(f'\nLoading {sp_dir}...')
-    print(f'Adding {ner_dir}...')
-    print(f'Writing to {out_dir}...\n')
-    terms_file = os.path.join(trm_dir, f'frequencies-{abbreviate_topic(topic)}.json')
+    terms_file = os.path.join(trm_dir, 'frequencies.json')
     terms = json.loads(open(terms_file).read())
     meta = load_metadata(meta_file)
     docs = os.listdir(doc_dir)
-    with open(f'log-merger-{topic}.log', 'w') as log:
+    with open(f'logs/merger-{timestamp()}.log', 'w') as log:
         for doc in tqdm(sorted(docs)[:limit]):
-            # print(f'{doc}')
             # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
             # processed_doc file format: 54b4324ee138239d8684aeb2.json
             # processed_ner file format: 54b4324ee138239d8684aeb2.json
-            sp_obj = load_json(sp_dir, doc[:-5] + '_input.pdf.json')
+            scp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
             doc_obj = load_json(doc_dir, doc)
             ner_obj = load_json(ner_dir, doc)
             if 'entities' in ner_obj:
@@ -75,7 +59,7 @@ def process_topic(topic: str, limit: int):
             identifier = os.path.splitext(doc)[0]
             trm_obj = terms.get(identifier, [])
             try:
-                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj, meta)
+                merged_obj = merge(doc, scp_obj, doc_obj, ner_obj, trm_obj, meta)
                 if valid_merger(merged_obj):
                     with open(os.path.join(out_dir, doc), 'w') as fh:
                         json.dump(merged_obj, fh, indent=2)
@@ -84,7 +68,8 @@ def process_topic(topic: str, limit: int):
                     #with open(os.path.join(out_dir, doc), 'w') as fh:
                     #    json.dump(merged_obj, fh, indent=2)
             except Exception as e:
-                log.write(f'{doc} -- {e}\n')
+                exception_type = type(e).__name__
+                log.write(f'{doc} -- {exception_type} - {e}\n')
 
 
 def sanitize_entities(ner_obj: dict):
@@ -117,7 +102,7 @@ def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict, m
     merged_obj['url'] = get_url(merged_obj['name'], meta)
     merged_obj['authors'] = get_meta('authors', sp_obj)
     merged_obj['abstract'] = get_abstract(doc_obj)
-    merged_obj['text'] = get_text(doc_obj)
+    merged_obj['content'] = get_text(doc_obj)
     merged_obj['summary'] = get_summary(merged_obj)
     merged_obj['entities'] = ner_obj.get('entities', {})
     merged_obj['terms'] = trm_obj
@@ -167,7 +152,7 @@ def get_text(doc_obj: dict):
 def get_summary(merged_obj: dict):
     """Get a summary by concatenating the abstact and the text while staying within
     the maximum number of tokens allowed."""
-    summary = merged_obj['abstract'] + ' ' + merged_obj['text']
+    summary = merged_obj['abstract'] + ' ' + merged_obj['content']
     return ' '.join(summary.split()[:SUMMARY_MAX_TOKENS])
     
 
@@ -176,7 +161,6 @@ def valid_merger(merged_obj: dict):
         if not merged_obj[field]:
             return False
     return True
-
 
 
 def parse_args():
@@ -192,44 +176,8 @@ def parse_args():
     return parser.parse_args()
 
 
-def merge_directory(
-        scpa_dir: str, meta_file: str, doc_dir: str, ner_dir: str, trm_dir: str,
-        out_dir: str, limit: int):
-    os.makedirs(out_dir, exist_ok=True)
-    terms_file = os.path.join(trm_dir, 'frequencies.json')
-    terms = json.loads(open(terms_file).read())
-    meta = load_metadata(meta_file)
-    docs = os.listdir(doc_dir)
-    with open(f'log-merger.log', 'w') as log:
-        for doc in tqdm(sorted(docs)[:limit]):
-            # scienceparse file format:  54b4324ee138239d8684aeb2_input.pdf.json
-            # processed_doc file format: 54b4324ee138239d8684aeb2.json
-            # processed_ner file format: 54b4324ee138239d8684aeb2.json
-            sp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
-            doc_obj = load_json(doc_dir, doc)
-            ner_obj = load_json(ner_dir, doc)
-            if 'entities' in ner_obj:
-                ner_obj['entities'] = sanitize_entities(ner_obj['entities'])
-            identifier = os.path.splitext(doc)[0]
-            trm_obj = terms.get(identifier, [])
-            try:
-                merged_obj = merge(doc, sp_obj, doc_obj, ner_obj, trm_obj, meta)
-                if valid_merger(merged_obj):
-                    with open(os.path.join(out_dir, doc), 'w') as fh:
-                        json.dump(merged_obj, fh, indent=2)
-                else:
-                    log.write(f'{doc} -- object from merger was not complete\n')
-                    #with open(os.path.join(out_dir, doc), 'w') as fh:
-                    #    json.dump(merged_obj, fh, indent=2)
-            except Exception as e:
-                log.write(f'{doc} -- {e}\n')
-
 
 if __name__ == '__main__':
 
     args = parse_args()
     merge_directory(args.scpa, args.meta, args.doc, args.ner, args.trm, args.out, args.limit)
-
-    # This was the old way of calling the code, to be deprecated
-    # limit = int(sys.argv[1]) if len(sys.argv) > 1 else sys.maxsize
-    # process_topics(limit)

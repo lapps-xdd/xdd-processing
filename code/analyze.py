@@ -13,28 +13,36 @@ import os, sys
 from config import TOPICS_DIR, TOPICS, DATA_DIRS
 
 def analyze_topics(write_overview: bool):
+    print(
+        '\nPrinting number of documents, total size, average_size and processing' +
+        '\ntime in seconds (the latter gives some wacco results)\n')
     for topic in TOPICS:
-        print(
-            '\nPrinting number of documents, total size, average_size and processing' +
-            '\ntime in seconds (the latter gives some wacco results)\n')
         analyze_topic(topic, write_overview)
+        print()
 
 def analyze_topic(topic: str, write_overview: bool):
+    print(f'{topic}\n')
     for data_dir in DATA_DIRS:
         path = os.path.join(TOPICS_DIR, topic, data_dir)
+        if not os.path.exists(path):
+            continue
         fnames = [os.path.join(path, fname) for fname in os.listdir(path)]
         fnames = [f for f in fnames if os.path.isfile(f)]
         fsizes = [(os.path.getsize(f), os.path.split(f)[-1]) for f in fnames]
         ftimes = [os.stat(f).st_birthtime for f in fnames]
         ftimes = list(sorted(ftimes))
         number_of_files = len(fnames)
+        if number_of_files == 0:
+            continue
         total_size = int(sum([pair[0] for pair in fsizes]) / 1000000)
         average_size = int(total_size * 1000 / number_of_files)
-        elapsed_time = ftimes[-1] - ftimes[0]
-        print(f'{topic:20} {data_dir:20} {number_of_files:5d} {total_size:4d}Mb'
-              + f'{average_size:5d}Kb  {elapsed_time:6.0f}')
-        if write_overview and data_dir == 'processed_doc':
-            overview_file = f'out/{topic}-{data_dir}-sizes.html'
+        elapsed_time = str(int(ftimes[-1] - ftimes[0]))
+        if data_dir in ('text', 'scienceparse'):
+            elapsed_time = '-'
+        print(f'    {data_dir:15} {number_of_files:5d} {total_size:5d}M'
+              + f'{average_size:5d}K  {elapsed_time:>6s}')
+        if write_overview and data_dir == 'output/doc':
+            overview_file = f'out/sizes-{topic}-{data_dir.split("/")[0]}.html'
             with open(overview_file, 'w') as fh:
                 #print(f'Printing {overview_file}')
                 fh.write('<html>\n')
@@ -43,7 +51,7 @@ def analyze_topic(topic: str, write_overview: bool):
                     fh.write('<tr>\n')
                     fh.write(f'  <td>{n}</td>\n')
                     fh.write(f'  <td>{fsize}</td>\n')
-                    fh.write(f'  <td><a href="{path}/{fname}"">{fname}</a></td>\n')
+                    fh.write(f'  <td><a href="{path}/{fname}">{fname}</a></td>\n')
                     fh.write('</tr>\n')
                 fh.write('</table>\n')
                 fh.write('</html>\n')

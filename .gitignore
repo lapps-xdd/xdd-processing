@@ -2,8 +2,7 @@
 .DS_Store
 code/elastic-*.json
 code/random-*.json
-code/log*
-code/*log*
+code/logs*
 code/venv*
 __pycache__
 .ipynb_checkpoints/

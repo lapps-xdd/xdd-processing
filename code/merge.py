@@ -36,7 +36,7 @@ SUMMARY_MAX_TOKENS = 2000
 
 def merge_directory(
         scpa_dir: str, meta_file: str, doc_dir: str, ner_dir: str, trm_dir: str,
-        out_dir: str, limit: int):
+        sum_dir: str, out_dir: str, limit: int):
     os.makedirs(out_dir, exist_ok=True)
     terms_file = os.path.join(trm_dir, 'frequencies.json')
     terms = json.loads(open(terms_file).read())
@@ -56,7 +56,7 @@ def merge_directory(
             identifier = os.path.splitext(doc)[0]
             trm_obj = terms.get(identifier, [])
             try:
-                merged_obj = merge(doc, scp_obj, doc_obj, ner_obj, trm_obj, meta)
+                merged_obj = merge(doc, scp_obj, doc_obj, ner_obj, trm_obj, summary, meta)
                 if valid_merger(merged_obj):
                     with open(os.path.join(out_dir, doc), 'w') as fh:
                         json.dump(merged_obj, fh, indent=2)

@@ -65,7 +65,7 @@ def process_directory(
             n += 1
             try:
                 t0 = time.time()
-                # skip if the output lready exists and you are not overwriting
+                # skip if the output already exists and you are not overwriting
                 if not overwrite and output_exists(doc, pos_dir, ner_dir):
                     continue
                 entities, paragraphs = process_doc(doc_dir, doc, n + 1)

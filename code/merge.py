@@ -14,10 +14,6 @@ $ python merge.py \
       --scpa $DIR/scienceparse --doc $DIR/output/doc --ner $DIR/output/ner \
       --trm $DIR/output/trm --meta $DIR/metadata.json --out $DIR/output/mer
 
-
-TODO:
-- Merge in any information from the metadata API
-
 """
 
 import os, sys, json, argparse
@@ -54,6 +50,7 @@ def merge_directory(
             scp_obj = load_json(scpa_dir, doc[:-5] + '_input.pdf.json')
             doc_obj = load_json(doc_dir, doc)
             ner_obj = load_json(ner_dir, doc)
+            summary = get_summary(sum_dir, doc)
             if 'entities' in ner_obj:
                 ner_obj['entities'] = sanitize_entities(ner_obj['entities'])
             identifier = os.path.splitext(doc)[0]
@@ -91,7 +88,13 @@ def load_json(topic_dir: str, doc: str):
         return {}
 
 
-def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict, meta: dict):
+def get_summary(directory: str, docname: str):
+    with open(os.path.join(directory, docname[:-4] + 'txt')) as fh:
+        summary = fh.read()
+    return summary
+
+
+def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict, summary: str, meta: dict):
     """Merge ScienceParse, DocumentParser and NER results into one JSON file, collecting
     all data that we want to load into ElasticSearch. Uses abstract and metadata from the
     first, the text from the second, and the entities from the third."""
@@ -103,7 +106,8 @@ def merge(doc: str, sp_obj: dict, doc_obj: dict, ner_obj: dict, trm_obj: dict, m
     merged_obj['authors'] = get_meta('authors', sp_obj)
     merged_obj['abstract'] = get_abstract(doc_obj)
     merged_obj['content'] = get_text(doc_obj)
-    merged_obj['summary'] = get_summary(merged_obj)
+    merged_obj['summary'] = summary
+    #merged_obj['summary'] = get_summary(merged_obj)
     merged_obj['entities'] = ner_obj.get('entities', {})
     merged_obj['terms'] = trm_obj
     return merged_obj
@@ -149,13 +153,6 @@ def get_text(doc_obj: dict):
         text.write(f'{section["text"].strip()}\n\n')
     return text.getvalue()[:MAX_SIZE]
 
-def get_summary(merged_obj: dict):
-    """Get a summary by concatenating the abstact and the text while staying within
-    the maximum number of tokens allowed."""
-    summary = merged_obj['abstract'] + ' ' + merged_obj['content']
-    return ' '.join(summary.split()[:SUMMARY_MAX_TOKENS])
-    
-
 def valid_merger(merged_obj: dict):
     for field in ('title', 'year', 'authors'):
         if not merged_obj[field]:
@@ -170,6 +167,7 @@ def parse_args():
     parser.add_argument('--doc', help="directory with document structure parses")
     parser.add_argument('--ner', help="directory with NER data")
     parser.add_argument('--trm', help="directory with term data")
+    parser.add_argument('--sum', help="directory with summary data")
     parser.add_argument('--out', help="output directory")
     parser.add_argument('--limit', help="Maximum number of documents to process",
                         type=int, default=sys.maxsize)
@@ -180,4 +178,4 @@ def parse_args():
 if __name__ == '__main__':
 
     args = parse_args()
-    merge_directory(args.scpa, args.meta, args.doc, args.ner, args.trm, args.out, args.limit)
+    merge_directory(args.scpa, args.meta, args.doc, args.ner, args.trm, args.sum, args.out, args.limit)

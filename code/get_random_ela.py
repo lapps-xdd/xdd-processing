@@ -6,23 +6,23 @@ bulk upload.
 $ python random.py --topic TOPIC --tags TAGS -n N
 
 This hands in the name of the topic, a comma-separated list of tags and a count (the
-default is 25). The topic needs to be defined in the config file (and the merged files
-for it need to be where the config file expects them to be).
+default is 25). The topic needs to be defined in the config file and the merged files
+for it need to be where the config file expects them to be.
 
 Output is written to out/random-ela-TOPIC-NUMBER.json
 
 Note that the output file is not exactly json, rather they are files where each line
-is a json object (as required for an ELastiicSearch bulk import).
+is a json object (as required for an ElasticSearch bulk import).
 
 With the test domains as of March 2024, we use these invocations:
 
-$ python get_random_ela.py --topic biomedical --tags biomedical -n 100
-$ python get_random_ela.py --topic climate-change-modeling --tags climate-change -n 100
-$ python get_random_ela.py --topic cultivars --tags cultivars -n 100
-$ python get_random_ela.py --topic geoarchive --tags geoarchive -n 100
-$ python get_random_ela.py --topic mars --tags mars -n 100
-$ python get_random_ela.py --topic molecular-physics --tags molecular-physics -n 100
-$ python get_random_ela.py --topic random --tags random -n 100
+$ python get_random_ela.py --topic biomedical --tags biomedical -n 1000
+$ python get_random_ela.py --topic climate-change-modeling --tags climate-change -n 1000
+$ python get_random_ela.py --topic cultivars --tags cultivars -n 1000
+$ python get_random_ela.py --topic geoarchive --tags geoarchive -n 1000
+$ python get_random_ela.py --topic mars --tags mars -n 1000
+$ python get_random_ela.py --topic molecular-physics --tags molecular-physics -n 1000
+$ python get_random_ela.py --topic random --tags random -n 1000
 
 """
 
